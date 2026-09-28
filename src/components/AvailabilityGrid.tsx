@@ -117,7 +117,7 @@ export function AvailabilityGrid({
                     <span>
                       <span className="block text-xs font-extrabold">{formatLong(date)}</span>
                       <span className={`mt-0.5 flex items-center gap-1 text-[9px] font-bold ${selected ? "text-white/70" : "opacity-70"}`}>
-                        {session === "morning" ? <SunriseIcon /> : <SunsetIcon />}
+                        {session === "morning" ? <SunIcon /> : <MoonIcon />}
                         {session === "morning" ? "Morning safari" : "Evening safari"}
                       </span>
                     </span>
@@ -173,12 +173,12 @@ function ZoneMonogram({ name }: { name: string }) {
   );
 }
 
-function SunriseIcon() {
-  return <svg aria-hidden="true" viewBox="0 0 24 24" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 18h16M6 14a6 6 0 0 1 12 0M12 3v3M4.2 7.2l2.1 2.1M19.8 7.2l-2.1 2.1" strokeLinecap="round" /></svg>;
+function SunIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24" className="h-2.5 w-2.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3.5" /><path d="M12 2.5v2M12 19.5v2M4.5 4.5l1.4 1.4M18.1 18.1l1.4 1.4M2.5 12h2M19.5 12h2M4.5 19.5l1.4-1.4M18.1 5.9l1.4-1.4" strokeLinecap="round" /></svg>;
 }
 
-function SunsetIcon() {
-  return <svg aria-hidden="true" viewBox="0 0 24 24" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 18h16M6 14a6 6 0 0 1 12 0M12 3v3M8 21h8" strokeLinecap="round" /></svg>;
+function MoonIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24" className="h-2.5 w-2.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 15.2A8.2 8.2 0 0 1 8.8 4a8.4 8.4 0 1 0 11.2 11.2Z" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 }
 
 function CheckIcon() {

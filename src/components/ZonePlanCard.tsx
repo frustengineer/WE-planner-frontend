@@ -25,7 +25,7 @@ export function ZonePlanCard({
       type="button"
       onClick={onToggle}
       aria-pressed={isSelected}
-      className={`w-[79vw] max-w-[292px] shrink-0 snap-start overflow-hidden rounded-[22px] border text-left transition active:scale-[0.98] sm:w-auto sm:max-w-none ${
+      className={`first:ml-5 last:mr-5 w-[79vw] max-w-[292px] shrink-0 snap-start scroll-ml-5 overflow-hidden rounded-[22px] border text-left transition active:scale-[0.98] sm:first:ml-0 sm:last:mr-0 sm:w-auto sm:max-w-none ${
         isSelected
           ? "border-[#2e7251] bg-[#eef8f1] shadow-[0_12px_28px_rgba(46,114,81,0.18)]"
           : "border-[#b1dfbd] bg-[#effaf2] shadow-[0_8px_22px_rgba(33,133,82,0.09)] hover:-translate-y-0.5 hover:border-[#218552]"

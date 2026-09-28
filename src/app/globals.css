@@ -210,3 +210,14 @@ a {
     box-shadow: none;
   }
 }
+
+.offer-ticket-edge::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: -9px;
+  left: 0;
+  height: 10px;
+  background: radial-gradient(circle at 9px 0, #adf0b8 8px, transparent 8.5px) 0 0 / 18px 10px repeat-x;
+  pointer-events: none;
+}

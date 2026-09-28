@@ -33,6 +33,7 @@ export default function Step2() {
   const [cartAnimationKey, setCartAnimationKey] = useState(0);
   const [dateChangeNotice, setDateChangeNotice] = useState<string | null>(null);
   const [isTripBarPinned, setIsTripBarPinned] = useState(false);
+  const [couponCopied, setCouponCopied] = useState(false);
   const tripBarSentinelRef = useRef<HTMLDivElement>(null);
 
   const occupancy = calculatePartyOccupancy(state.numAdults, state.childAges);
@@ -194,6 +195,16 @@ export default function Step2() {
     setDateChangeNotice("Checking permits for your new dates…");
   }
 
+  async function copyOfferCode() {
+    try {
+      await navigator.clipboard.writeText("LONGWEEKEND");
+      setCouponCopied(true);
+      window.setTimeout(() => setCouponCopied(false), 1800);
+    } catch {
+      setCouponCopied(false);
+    }
+  }
+
   function handleContinue(event: React.FormEvent) {
     event.preventDefault();
     if (state.plan.length === 0) {
@@ -219,27 +230,26 @@ export default function Step2() {
   return (
     <main className="relative min-h-screen bg-[#f4f6f4] pb-32 sm:pb-10">
       <form onSubmit={handleContinue} className="mx-auto max-w-6xl">
-        <div className="border-b border-[#dde3df] bg-white px-4 pb-1 pt-2 sm:rounded-b-[28px] sm:px-7 sm:shadow-[0_10px_30px_rgba(25,50,40,0.06)]">
-          <div className="relative mx-auto max-w-md">
-            <button type="button" onClick={() => router.push("/book/step-1")} className="absolute left-0 top-5 z-10 flex h-9 w-9 items-center justify-center text-[#111915] transition hover:-translate-x-0.5 hover:text-black" aria-label="Back to trip basics">
+        <div className="border-b border-[#dde3df] bg-white px-4 pb-2 pt-2 sm:rounded-b-[28px] sm:px-7 sm:shadow-[0_10px_30px_rgba(25,50,40,0.06)]">
+          <div className="mx-auto grid max-w-4xl grid-cols-[40px_minmax(0,1fr)_72px] items-center gap-2">
+            <button type="button" onClick={() => router.push("/book/step-1")} className="flex h-10 w-9 items-center justify-start text-[#17201c] transition hover:-translate-x-0.5 hover:text-[#1f6b48]" aria-label="Back to trip basics">
               <BackIcon />
             </button>
-            <div className="absolute right-0 top-5 z-10 flex items-center gap-1">
-              <button type="button" onClick={() => router.push("/book/step-1")} className="flex h-9 w-7 items-center justify-center text-[#17201c] transition hover:text-[#2e7251]" aria-label="Edit trip basics">
+            <div className="min-w-0 text-center">
+              <p className="text-[9px] font-extrabold uppercase tracking-[0.16em] text-[#4d7863]">Step 2 of 4</p>
+              <h1 className="font-display truncate text-xl font-bold leading-tight text-[#17201c] sm:text-2xl">Safari permits</h1>
+            </div>
+            <div className="flex items-center justify-end gap-2">
+              <button type="button" onClick={() => router.push("/book/step-1")} className="flex h-10 w-7 items-center justify-center text-[#17201c] transition hover:-translate-y-0.5 hover:text-[#2e7251]" aria-label="Edit trip basics">
                 <EditIcon />
               </button>
-              <a href="https://wa.me/?text=Hi%2C%20I%20need%20help%20planning%20my%20safari%20with%20Wild%20Excursions." target="_blank" rel="noreferrer" className="flex h-9 w-7 items-center justify-center text-[#18a957] transition hover:text-[#087a42]" aria-label="Chat on WhatsApp">
+              <a href="https://wa.me/?text=Hi%2C%20I%20need%20help%20planning%20my%20safari%20with%20Wild%20Excursions." target="_blank" rel="noreferrer" className="flex h-10 w-7 items-center justify-center text-[#18a957] transition hover:-translate-y-0.5 hover:text-[#087a42]" aria-label="Chat on WhatsApp">
                 <WhatsAppIcon />
               </a>
             </div>
-            <StepIndicator current={2} />
           </div>
-          <div className="mx-auto max-w-4xl pb-5">
-            <div className="min-w-0">
-                <p className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[#3f725b]">Step 2 · Permits & stay</p>
-                <h1 className="font-display mt-1 text-[28px] font-bold leading-tight text-[#15221c] sm:text-4xl">Choose your safari permits</h1>
-                <p className="mt-1.5 text-xs leading-5 text-[#67736d] sm:text-sm">Compare availability like a travel booking app, then tap a permit to add it.</p>
-            </div>
+          <div className="mx-auto max-w-md">
+            <StepIndicator current={2} />
           </div>
         </div>
 
@@ -276,6 +286,19 @@ export default function Step2() {
         </div>
         </div>
 
+        <section className="offer-ticket-edge relative bg-[#adf0b8] px-5 pb-5 pt-4 text-[#17201c] sm:px-7 sm:pb-6 sm:pt-5">
+          <div className="mx-auto flex max-w-4xl items-center justify-between gap-4">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium sm:text-base">Long Weekend Offer</p>
+              <p className="mt-0.5 whitespace-nowrap text-xl font-black sm:text-2xl">Flat ₹350 Off</p>
+            </div>
+            <button type="button" onClick={copyOfferCode} className="flex min-w-0 max-w-[210px] flex-1 items-center justify-between gap-2 rounded-2xl border-2 border-dashed border-[#218552] bg-white px-3 py-3 text-left text-[#18211d] transition active:scale-[0.98] sm:max-w-[310px] sm:px-5" aria-label="Copy offer code LONGWEEKEND">
+              <span className="truncate text-sm font-black tracking-[0.02em] sm:text-xl">{couponCopied ? "COPIED!" : "LONGWEEKEND"}</span>
+              {couponCopied ? <CheckIconSmall /> : <CopyIcon />}
+            </button>
+          </div>
+        </section>
+
         <div className="mx-3 space-y-5 pt-5 sm:mx-5 sm:space-y-7 sm:pt-7 lg:mx-0">
           {fetchError && <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-danger">{fetchError}</p>}
           {dateChangeNotice && <p className="rounded-xl border border-[#c8dccf] bg-[#eef8f1] px-4 py-3 text-xs font-semibold text-[#246441]">{dateChangeNotice}</p>}
@@ -289,7 +312,7 @@ export default function Step2() {
             </div>
           )}
 
-          <section className="overflow-hidden rounded-[28px] border border-[#efdda3] bg-[linear-gradient(145deg,#fff5c9_0%,#f7f3df_45%,#e8f6ed_100%)] shadow-[0_16px_38px_rgba(56,65,37,0.10)]">
+          <section className="-mx-3 overflow-hidden bg-[linear-gradient(145deg,#fff5c9_0%,#f7f3df_45%,#e8f6ed_100%)] sm:-mx-5 lg:mx-0">
             <div className="flex flex-col gap-4 px-5 pb-4 pt-5 sm:flex-row sm:items-center sm:justify-between sm:px-7">
               <div>
                 <div className="flex items-center gap-2">
@@ -311,7 +334,7 @@ export default function Step2() {
                 {loading ? "Finding the best permit combination…" : "No complete permit plan was found. Try nearby dates below."}
               </div>
             ) : (
-              <div className="permit-scroll flex snap-x snap-mandatory gap-3 overflow-x-auto px-5 pb-6 sm:grid sm:grid-cols-3 sm:px-7">
+              <div className="permit-scroll flex snap-x snap-mandatory gap-3 overflow-x-auto pb-6 sm:grid sm:grid-cols-3 sm:px-7">
                 {recommendedPlan.map((safari) => (
                   <ZonePlanCard
                     key={`${safari.zone.id}-${safari.date}-${safari.session}`}
@@ -330,12 +353,7 @@ export default function Step2() {
                 <span className="rounded-full bg-[#18211d] px-5 py-3 text-xs font-bold text-white shadow-xl">Refreshing permits…</span>
               </div>
             )}
-            <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <p className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[#3f725b]">All available options</p>
-                <h2 className="font-display mt-1 text-2xl font-bold text-[#18211d]">Compare safari permits</h2>
-                <p className="mt-1 text-xs text-[#68756f]">Swipe across permits. One permit can be selected for each safari session.</p>
-              </div>
+            <div className="mb-5">
               <div className="grid grid-cols-2 rounded-xl bg-[#e8ece9] p-1" aria-label="Safari permit type">
                 {(["buffer", "core"] as ZoneType[]).map((zoneType) => (
                   <button key={zoneType} type="button" onClick={() => setActiveZoneType(zoneType)} className={`rounded-[10px] px-5 py-2.5 text-xs font-extrabold capitalize transition ${activeZoneType === zoneType ? "bg-[#18211d] text-white shadow-md" : "text-[#66736d]"}`}>
@@ -348,13 +366,6 @@ export default function Step2() {
             <div className="space-y-7">
               {availabilitySections.map((section) => (
                 <div key={`${section.context}-${section.range}-${section.dates[0]}-${activeZoneType}`}>
-                  <div className="mb-3 flex items-center justify-between gap-3">
-                    <div>
-                      <h3 className="text-sm font-extrabold capitalize text-[#203028]">{activeZoneType} zones in {section.range}</h3>
-                      <p className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.1em] text-[#7b8881]">{section.context === "original" ? "Your original search" : "Recommended alternative"}</p>
-                    </div>
-                    <span className="hidden rounded-full border border-[#d8e0dc] bg-white px-3 py-1 text-[10px] font-semibold text-[#64736b] sm:inline">Green = available</span>
-                  </div>
                   <AvailabilityGrid
                     range={section.range}
                     zoneType={activeZoneType}
@@ -479,4 +490,10 @@ function CalendarEditIcon() {
 }
 function PeopleIcon() {
   return <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4 text-[#2e7251]" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="9" cy="8" r="3" /><path d="M3 20a6 6 0 0 1 12 0M16 5.5a3 3 0 0 1 0 5.5M16 14a5 5 0 0 1 5 5" strokeLinecap="round" /></svg>;
+}
+function CopyIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2"><rect x="8" y="5" width="11" height="14" rx="2" /><path d="M16 5V4a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h2" strokeLinecap="round" /></svg>;
+}
+function CheckIconSmall() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5 shrink-0 text-[#218552]" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="m5 12 4 4L19 6" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 }

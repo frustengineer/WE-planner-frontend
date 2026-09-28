@@ -41,7 +41,7 @@ function MobileBottomNavInner() {
       <MobileNavItem href="/" icon="home" label="Home" active={pathname === "/"} />
       <MobileNavItem href="/book/step-1" icon="safari" label="Safari" active={onStep1 && !wantsStay} />
       <MobileNavItem href="/book/step-1?service=stay" icon="stay" label="Stay" active={onStep1 && wantsStay} />
-      <MobileNavItem href="/book/step-3" icon="booking" label="Booking" active={pathname.startsWith("/book/step-3")} />
+      <MobileNavItem href="/book/step-3" icon="booking" label="Booking" active={pathname.startsWith("/book/step-3") || pathname.startsWith("/book/step-4")} />
     </nav>
   );
 }

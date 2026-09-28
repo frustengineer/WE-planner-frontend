@@ -15,7 +15,7 @@ export function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const pathname = usePathname();
 
-  if (pathname === "/book/step-2") return null;
+  if (pathname.startsWith("/book/step-2") || pathname.startsWith("/book/step-3") || pathname.startsWith("/book/step-4")) return null;
 
   return (
     <div className="sticky top-3 z-40 mx-3 sm:mx-6">

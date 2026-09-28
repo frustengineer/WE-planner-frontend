@@ -105,6 +105,15 @@ a {
   outline-color: var(--brand);
 }
 
+.permit-scroll {
+  scrollbar-width: none;
+  overscroll-behavior-inline: contain;
+}
+
+.permit-scroll::-webkit-scrollbar {
+  display: none;
+}
+
 .font-display {
   font-family: Georgia, "Times New Roman", serif;
   letter-spacing: -0.025em;

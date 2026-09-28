@@ -38,7 +38,9 @@ export function StepOneClient({ jungles }: { jungles: Jungle[] }) {
   useEffect(() => {
     if (appliedQueryJungle.current) return;
     appliedQueryJungle.current = true;
-    const requestedSlug = new URLSearchParams(window.location.search).get("jungle");
+    const query = new URLSearchParams(window.location.search);
+    const requestedSlug = query.get("jungle");
+    const requestedEditor = query.get("edit");
     const requestedJungle = jungles.find(
       (item) => !item.comingSoon && item.slug === requestedSlug
     );
@@ -50,6 +52,24 @@ export function StepOneClient({ jungles }: { jungles: Jungle[] }) {
         plan: [],
         resortId: null,
       });
+    }
+    const editorTarget =
+      requestedEditor === "range"
+        ? "trip-range-control"
+        : requestedEditor === "date"
+          ? "trip-date-control"
+          : requestedEditor === "travellers"
+            ? "trip-travellers-control"
+            : null;
+    /* eslint-disable react-hooks/set-state-in-effect -- URL-driven edit links intentionally open the requested Step 1 control after mount */
+    if (requestedEditor === "range") setRangePickerOpen(true);
+    if (requestedEditor === "date") setCalendarOpen(true);
+    if (requestedEditor === "travellers") setTravellerPickerOpen(true);
+    /* eslint-enable react-hooks/set-state-in-effect */
+    if (editorTarget) {
+      requestAnimationFrame(() =>
+        document.getElementById(editorTarget)?.scrollIntoView({ behavior: "smooth", block: "center" })
+      );
     }
   }, [jungles, state.jungleSlug, update]);
 
@@ -227,7 +247,7 @@ export function StepOneClient({ jungles }: { jungles: Jungle[] }) {
             </div>
           )}
 
-          <SelectionButton icon="range" label="Which range" value={state.range ?? "Choose a range"} placeholder={!state.range} open={rangePickerOpen} onClick={() => {
+          <SelectionButton id="trip-range-control" icon="range" label="Which range" value={state.range ?? "Choose a range"} placeholder={!state.range} open={rangePickerOpen} onClick={() => {
             const next = !rangePickerOpen;
             closePickers("range");
             setRangePickerOpen(next);
@@ -248,6 +268,7 @@ export function StepOneClient({ jungles }: { jungles: Jungle[] }) {
 
           <div className="grid grid-cols-2 gap-3">
             <button
+              id="trip-date-control"
               type="button"
               aria-expanded={calendarOpen}
               onClick={() => {
@@ -304,7 +325,7 @@ export function StepOneClient({ jungles }: { jungles: Jungle[] }) {
             </div>
           )}
 
-          <SelectionButton icon="travellers" label="No. of travellers" value={`${occupancy.totalTravellers} traveller${occupancy.totalTravellers === 1 ? "" : "s"}`} open={travellerPickerOpen} onClick={() => {
+          <SelectionButton id="trip-travellers-control" icon="travellers" label="No. of travellers" value={`${occupancy.totalTravellers} traveller${occupancy.totalTravellers === 1 ? "" : "s"}`} open={travellerPickerOpen} onClick={() => {
             const next = !travellerPickerOpen;
             closePickers("travellers");
             setTravellerPickerOpen(next);
@@ -552,7 +573,8 @@ function SpecialFareCard({ title, subtitle, badge, selected, onClick }: {
   );
 }
 
-function SelectionButton({ icon, label, value, open, onClick, compact = false, placeholder = false }: {
+function SelectionButton({ id, icon, label, value, open, onClick, compact = false, placeholder = false }: {
+  id?: string;
   icon: "jungle" | "range" | "length" | "travellers";
   label: string;
   value: string;
@@ -562,7 +584,7 @@ function SelectionButton({ icon, label, value, open, onClick, compact = false, p
   placeholder?: boolean;
 }) {
   return (
-    <button type="button" onClick={onClick} aria-expanded={open} className={`flex w-full items-center rounded-2xl border bg-white py-3 text-left shadow-[0_2px_8px_rgba(17,17,17,0.03)] transition hover:border-accent focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 sm:gap-3 sm:px-4 ${compact ? "min-h-[88px] gap-2 px-2.5" : "min-h-[74px] gap-3 px-3.5"} ${open ? "border-accent ring-2 ring-accent/10" : "border-[#dedbd2]"}`}>
+    <button id={id} type="button" onClick={onClick} aria-expanded={open} className={`flex w-full items-center rounded-2xl border bg-white py-3 text-left shadow-[0_2px_8px_rgba(17,17,17,0.03)] transition hover:border-accent focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 sm:gap-3 sm:px-4 ${compact ? "min-h-[88px] gap-2 px-2.5" : "min-h-[74px] gap-3 px-3.5"} ${open ? "border-accent ring-2 ring-accent/10" : "border-[#dedbd2]"}`}>
       <FieldIcon type={icon} active={open} />
       <span className="min-w-0 flex-1">
         <span className="block whitespace-nowrap text-[9px] font-semibold uppercase tracking-[0.02em] text-muted sm:text-[10px]">{label}</span>

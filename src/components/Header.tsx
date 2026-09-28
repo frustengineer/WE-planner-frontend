@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 
 const NAV_LINKS = [
@@ -12,6 +13,9 @@ const NAV_LINKS = [
 
 export function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const pathname = usePathname();
+
+  if (pathname === "/book/step-2") return null;
 
   return (
     <div className="sticky top-3 z-40 mx-3 sm:mx-6">

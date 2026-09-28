@@ -1,23 +1,24 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { AvailabilityGrid, type AvailabilitySelection } from "@/components/AvailabilityGrid";
 import { StepIndicator } from "@/components/StepIndicator";
 import { ZonePlanCard } from "@/components/ZonePlanCard";
-import { AvailabilityGrid, type AvailabilitySelection } from "@/components/AvailabilityGrid";
-import { useBooking } from "@/lib/booking-context";
-import { dateRangeFrom, RANKING, RESORTS, toLocalISODate, ZONES } from "@/lib/mockData";
 import {
   recommendationRangeScopes,
   recommendPreferredSafariPlan,
   type PreferredRecommendation,
 } from "@/lib/engine";
-import { getSampleAvailability } from "@/lib/sampleAvailability";
+import { useBooking } from "@/lib/booking-context";
+import { dateRangeFrom, toLocalISODate, ZONES } from "@/lib/mockData";
 import { calculatePartyOccupancy } from "@/lib/occupancy";
 import { computeCart } from "@/lib/pricing";
+import { getSampleAvailability } from "@/lib/sampleAvailability";
 import type { AvailabilitySnapshot, ZoneType } from "@/lib/types";
 
-const REFRESH_INTERVAL_MS = 20000;
+const REFRESH_INTERVAL_MS = 20_000;
+const PLANNING_HORIZON = "2027-12-31";
 
 export default function Step2() {
   const router = useRouter();
@@ -26,71 +27,63 @@ export default function Step2() {
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [availability, setAvailability] = useState<AvailabilitySnapshot[]>([]);
-  const [asOf, setAsOf] = useState<Date | null>(null);
-  const [secondsAgo, setSecondsAgo] = useState(0);
-  const [refreshTick, setRefreshTick] = useState(0);
   const [recommendation, setRecommendation] = useState<PreferredRecommendation | null>(null);
+  const [activeZoneType, setActiveZoneType] = useState<ZoneType>("buffer");
+  const [refreshTick, setRefreshTick] = useState(0);
   const [cartAnimationKey, setCartAnimationKey] = useState(0);
   const [dateChangeNotice, setDateChangeNotice] = useState<string | null>(null);
-  const [activeZoneType, setActiveZoneType] = useState<ZoneType>("buffer");
+  const [isTripBarPinned, setIsTripBarPinned] = useState(false);
+  const tripBarSentinelRef = useRef<HTMLDivElement>(null);
+
   const occupancy = calculatePartyOccupancy(state.numAdults, state.childAges);
   const today = toLocalISODate(new Date());
-  const planningHorizon = "2027-12-31";
 
   useEffect(() => {
-    if (!state.range || !state.startDate) {
-      router.replace("/book/step-1");
-    }
-  }, [state.range, state.startDate, router]);
+    if (!state.range || !state.startDate) router.replace("/book/step-1");
+  }, [router, state.range, state.startDate]);
 
   const requestedDates = useMemo(
     () => (state.startDate ? dateRangeFrom(state.startDate, state.nights) : []),
     [state.startDate, state.nights]
   );
   const coverageDates = useMemo(
-    () =>
-      state.startDate
-        ? dateRangeFrom(shiftISODate(state.startDate, -5), state.nights + 10)
-        : [],
+    () => (state.startDate ? dateRangeFrom(shiftISODate(state.startDate, -5), state.nights + 10) : []),
     [state.startDate, state.nights]
   );
   const candidateRanges = useMemo(
-    () =>
-      state.range
-        ? Array.from(new Set(recommendationRangeScopes(state.range).flat()))
-        : [],
+    () => (state.range ? Array.from(new Set(recommendationRangeScopes(state.range).flat())) : []),
     [state.range]
   );
   const dates = useMemo(
-    () =>
-      state.recommendedStartDate
-        ? dateRangeFrom(state.recommendedStartDate, state.nights)
-        : requestedDates,
-    [state.recommendedStartDate, state.nights, requestedDates]
+    () => state.recommendedStartDate ? dateRangeFrom(state.recommendedStartDate, state.nights) : requestedDates,
+    [requestedDates, state.nights, state.recommendedStartDate]
   );
 
   useEffect(() => {
-    const poll = setInterval(() => setRefreshTick((t) => t + 1), REFRESH_INTERVAL_MS);
-    const tickClock = setInterval(() => setSecondsAgo((s) => s + 1), 1000);
-    return () => {
-      clearInterval(poll);
-      clearInterval(tickClock);
-    };
+    const refresh = setInterval(() => setRefreshTick((tick) => tick + 1), REFRESH_INTERVAL_MS);
+    return () => clearInterval(refresh);
   }, []);
 
-  // Build local sample slots for both zone types and every fallback range.
+  useEffect(() => {
+    const sentinel = tripBarSentinelRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      setIsTripBarPinned(!entry.isIntersecting && entry.boundingClientRect.top < 0);
+    });
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, []);
+
   useEffect(() => {
     if (!state.range || !state.startDate || coverageDates.length === 0) return;
-    const zoneIds = ZONES.filter((z) => candidateRanges.includes(z.range)).map((z) => z.id);
+    const zoneIds = ZONES.filter((zone) => candidateRanges.includes(zone.range)).map((zone) => zone.id);
     let cancelled = false;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- standard loading-flag-before-fetch pattern
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- loading state belongs to this request lifecycle
     setLoading(true);
     Promise.resolve()
       .then(() => getSampleAvailability(zoneIds, coverageDates))
       .then((data) => {
         if (cancelled) return;
-        setAvailability(data);
-        setFetchError(null);
         const result = recommendPreferredSafariPlan({
           range: state.range!,
           requestedStartDate: state.startDate!,
@@ -99,18 +92,14 @@ export default function Step2() {
           gypsiesRequired: occupancy.gypsiesRequired,
           minimumStartDate: toLocalISODate(new Date()),
         });
+        setAvailability(data);
         setRecommendation(result);
+        setFetchError(null);
         update({ recommendedStartDate: result.recommendedStartDate });
-        setDateChangeNotice((current) =>
-          current
-            ? "Dates updated. The new recommendations and sample availability are ready."
-            : current
-        );
-        setAsOf(new Date());
-        setSecondsAgo(0);
+        setDateChangeNotice((notice) => notice ? "Dates updated. New permit availability is ready." : notice);
       })
       .catch(() => {
-        if (!cancelled) setFetchError("Couldn't create sample availability — try refreshing.");
+        if (!cancelled) setFetchError("We could not refresh permit availability. Please try again.");
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -125,97 +114,64 @@ export default function Step2() {
     () => recommendation?.ranges ?? (state.range ? [state.range] : []),
     [recommendation?.ranges, state.range]
   );
-  const resortsForRange = RESORTS.filter((r) => recommendationRanges.includes(r.range));
+  const recommendedPlan = recommendation?.plan ?? [];
+  const { total: cartTotal } = computeCart({ ...state, resortId: null });
+  const cartItemCount = state.plan.length + (state.transfers ? 1 : 0);
+  const isRefreshing = loading && dateChangeNotice !== null;
+  const hasAlternativeRecommendation = Boolean(
+    recommendation &&
+      (recommendation.rangeChanged ||
+        (recommendation.dayOffset !== null && recommendation.dayOffset !== 0))
+  );
+
   const availabilitySections = useMemo(() => {
     if (!state.range || requestedDates.length === 0) return [];
-
-    const sections: Array<{
-      range: string;
-      dates: string[];
-      context: "original" | "recommended";
-    }> = [{ range: state.range, dates: requestedDates, context: "original" }];
-
+    const sections: Array<{ range: string; dates: string[]; context: "original" | "recommended" }> = [
+      { range: state.range, dates: requestedDates, context: "original" },
+    ];
     const recommendedDates = state.recommendedStartDate
       ? dateRangeFrom(state.recommendedStartDate, state.nights)
       : requestedDates;
-
     for (const range of recommendationRanges) {
-      const duplicatesOriginalSearch =
-        range === state.range &&
-        recommendedDates.length === requestedDates.length &&
-        recommendedDates.every((date, index) => date === requestedDates[index]);
-      if (!duplicatesOriginalSearch) {
-        sections.push({ range, dates: recommendedDates, context: "recommended" });
-      }
+      const same = range === state.range && recommendedDates.every((date, index) => date === requestedDates[index]);
+      if (!same) sections.push({ range, dates: recommendedDates, context: "recommended" });
     }
-
     return sections;
-  }, [
-    state.range,
-    state.recommendedStartDate,
-    state.nights,
-    requestedDates,
-    recommendationRanges,
-  ]);
-  // Arrival afternoon + departure morning + both sessions on the days
-  // between define the maximum possible safari count. The recommender
-  // may deliberately return one fewer when the preferred mix is full;
-  // the customer can then customize the selected slots in the grids.
-  const maximumSafaris = state.nights * 2;
-  const recommendedPlan = recommendation?.plan ?? [];
-  const recommendedBufferSafaris = recommendedPlan.filter(
-    (safari) => safari.zone.type === "buffer"
-  ).length;
-  const recommendedCoreSafaris = recommendedPlan.filter(
-    (safari) => safari.zone.type === "core"
-  ).length;
-  const selectedResort = RESORTS.find((resort) => resort.id === state.resortId);
-  const cartItemCount = state.plan.length + (selectedResort ? 1 : 0) + (state.transfers ? 1 : 0);
-  const { total: cartTotal } = computeCart(state);
-  const isAvailabilityAreaRefreshing = loading && dateChangeNotice !== null;
+  }, [recommendationRanges, requestedDates, state.nights, state.range, state.recommendedStartDate]);
 
-  const isCurated = (range: string, zoneType: ZoneType) =>
-    ZONES.some(
-      (z) => z.range === range && z.type === zoneType && RANKING.some((r) => r.zoneId === z.id)
-    );
-
-  function toggleSafari(safariToToggle: (typeof state.plan)[number]) {
-    const isAlreadySelected = state.plan.some(
-      (safari) =>
-        safari.zone.id === safariToToggle.zone.id &&
-        safari.date === safariToToggle.date &&
-        safari.session === safariToToggle.session
-    );
-    let plan = isAlreadySelected
-      ? state.plan.filter(
-          (safari) =>
-            !(
-              safari.zone.id === safariToToggle.zone.id &&
-              safari.date === safariToToggle.date &&
-              safari.session === safariToToggle.session
-            )
-        )
-      : [
-          ...state.plan.filter(
-            (safari) =>
-              !(safari.date === safariToToggle.date && safari.session === safariToToggle.session)
-          ),
-          safariToToggle,
-        ];
-
+  function commitPlan(plan: typeof state.plan) {
     const sessionOrder = { morning: 0, afternoon: 1 };
-    plan = plan
-      .sort(
-        (a, b) =>
-          a.date.localeCompare(b.date) || sessionOrder[a.session] - sessionOrder[b.session]
-      )
+    const normalized = [...plan]
+      .sort((a, b) => a.date.localeCompare(b.date) || sessionOrder[a.session] - sessionOrder[b.session])
       .map((safari, index) => ({ ...safari, safariNumber: index + 1 }));
     update({
-      plan,
-      numSafarisBuffer: plan.filter((safari) => safari.zone.type === "buffer").length,
-      numSafarisCore: plan.filter((safari) => safari.zone.type === "core").length,
+      plan: normalized,
+      numSafarisBuffer: normalized.filter((safari) => safari.zone.type === "buffer").length,
+      numSafarisCore: normalized.filter((safari) => safari.zone.type === "core").length,
     });
-    if (!isAlreadySelected) setCartAnimationKey((key) => key + 1);
+  }
+
+  function toggleSafari(safariToToggle: (typeof state.plan)[number]) {
+    const selected = state.plan.some(
+      (safari) => safari.zone.id === safariToToggle.zone.id && safari.date === safariToToggle.date && safari.session === safariToToggle.session
+    );
+    const plan = selected
+      ? state.plan.filter(
+          (safari) => !(safari.zone.id === safariToToggle.zone.id && safari.date === safariToToggle.date && safari.session === safariToToggle.session)
+        )
+      : [
+          ...state.plan.filter((safari) => !(safari.date === safariToToggle.date && safari.session === safariToToggle.session)),
+          safariToToggle,
+        ];
+    commitPlan(plan);
+    if (!selected) setCartAnimationKey((key) => key + 1);
+    setError(null);
+  }
+
+  function addRecommendedPlan() {
+    commitPlan(recommendedPlan);
+    if (recommendedPlan.length) setCartAnimationKey((key) => key + 1);
+    setError(null);
   }
 
   function handleToggleSelection(selection: AvailabilitySelection) {
@@ -224,537 +180,303 @@ export default function Step2() {
       zone: selection.zone,
       date: selection.date,
       session: selection.session,
-      reason: `Selected from sample availability · priority #${selection.rank}`,
+      reason: `Selected permit · priority #${selection.rank}`,
       isFillIn: false,
       isProvisional: selection.isProvisional,
       gypsiesRequired: occupancy.gypsiesRequired,
     });
   }
 
-  function handleResortSelection(resortId: string) {
-    const isRemoving = state.resortId === resortId;
-    update({ resortId: isRemoving ? null : resortId });
-    if (!isRemoving) setCartAnimationKey((key) => key + 1);
-  }
-
   function changeStartDate(startDate: string) {
-    if (!startDate || startDate < today || startDate > planningHorizon) return;
-    const removedSafaris = state.plan.length;
-    update({
-      startDate,
-      plan: [],
-      numSafarisBuffer: 0,
-      numSafarisCore: 0,
-    });
+    if (!startDate || startDate < today || startDate > PLANNING_HORIZON) return;
+    update({ startDate, plan: [], numSafarisBuffer: 0, numSafarisCore: 0 });
     setError(null);
-    setDateChangeNotice(
-      removedSafaris > 0
-        ? `Dates updated. ${removedSafaris} selected ${removedSafaris === 1 ? "safari was" : "safaris were"} removed from your cart so you can choose from the new availability.`
-        : "Dates updated. Refreshing sample availability now."
-    );
+    setDateChangeNotice("Checking permits for your new dates…");
   }
 
-  function handleContinue(e: React.FormEvent) {
-    e.preventDefault();
+  function handleContinue(event: React.FormEvent) {
+    event.preventDefault();
     if (state.plan.length === 0) {
-      setError("Select at least one available safari to continue.");
+      setError("Choose at least one available safari permit to continue.");
       return;
     }
     const unavailableSelection = state.plan.some((safari) => {
       if (safari.isProvisional) return false;
       const snapshot = availability.find(
-        (item) =>
-          item.zoneId === safari.zone.id &&
-          item.date === safari.date &&
-          item.session === safari.session
+        (item) => item.zoneId === safari.zone.id && item.date === safari.date && item.session === safari.session
       );
-      return (
-        !snapshot ||
-        snapshot.status !== "available" ||
-        snapshot.availableCount < occupancy.gypsiesRequired
-      );
+      return !snapshot || snapshot.status !== "available" || snapshot.availableCount < occupancy.gypsiesRequired;
     });
     if (unavailableSelection) {
-      setError("Availability changed for one of your selected safaris. Refresh and choose another open slot.");
-      return;
-    }
-    if (!state.resortId) {
-      setError("Pick a resort to continue.");
+      setError("Availability changed for a selected permit. Refresh and choose another open option.");
       return;
     }
     setError(null);
+    update({ resortId: null });
     router.push("/book/step-3");
   }
 
   return (
-    <div className="relative -mt-20 min-h-screen overflow-hidden bg-[linear-gradient(180deg,#c9f1ff_0%,#e7f8ef_28%,#f8faf7_62%,#ffffff_100%)] pb-24 pt-20 sm:-mt-24 sm:pt-24">
-      <div className="pointer-events-none absolute -left-20 top-24 h-72 w-72 rounded-full bg-white/55 blur-3xl" aria-hidden="true" />
-      <div className="pointer-events-none absolute -right-24 top-48 h-80 w-80 rounded-full bg-[#7ed7ff]/25 blur-3xl" aria-hidden="true" />
-      <div className="relative">
-      <StepIndicator current={2} />
-      <form onSubmit={handleContinue} className="mx-3 space-y-6 pb-28 sm:mx-auto sm:max-w-6xl sm:pb-8">
-        <div className="px-2 text-center">
-          <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#236d61]">Step 2 of 3</p>
-          <h1 className="font-display mt-2 text-3xl font-bold text-brand-dark sm:text-4xl">Build Your Safari</h1>
-          <p className="mt-2 text-sm text-[#53686d]">
-            {recommendation?.rangeLabel ?? state.range} · {dates[0] && formatShort(dates[0])} –{" "}
-            {dates[dates.length - 1] && formatShort(dates[dates.length - 1])}
-          </p>
-          <p className="mx-auto mt-2 max-w-2xl rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-xs font-medium text-warning">
-            Frontend demo: availability and prices are sample data. No booking or enquiry will be sent.
-          </p>
-        </div>
-
-        <div className="overflow-hidden rounded-[28px] border border-white/80 bg-white/90 p-5 shadow-[0_20px_48px_rgba(27,72,78,0.14)] backdrop-blur-xl sm:p-7">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="max-w-2xl">
-          <p className="text-[10px] font-extrabold uppercase tracking-[.15em] text-[#236d61]">Recommended route</p>
-          <p className="font-display mt-2 text-2xl font-bold text-brand-dark">A considered plan for your dates</p>
-          <p className="mt-2 text-xs leading-5 text-muted">
-            Your {state.nights}N/{state.nights + 1}D trip has up to {maximumSafaris} safari sessions.
-            We try {state.nights + 1} Buffer + {Math.max(0, state.nights - 1)} Core, then {state.nights} Buffer + {Math.max(0, state.nights - 1)} Core,
-            then {state.nights + 1} Buffer. Each ladder follows zone-ranking priority.
-          </p>
-          </div>
-          <div className="shrink-0 rounded-2xl bg-[#18212f] px-5 py-4 text-white sm:text-right">
-            <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-white/55">Plan size</p>
-            <p className="font-display mt-1 text-3xl font-bold text-accent">{recommendedPlan.length}</p>
-            <p className="text-[10px] text-white/65">recommended safaris</p>
-          </div>
-          </div>
-          <div className="mt-5 flex flex-wrap items-center gap-2 text-sm">
-            <span className="rounded-full bg-[#18212f] px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm">
-              {recommendedPlan.length} recommended
-            </span>
-            <span className="rounded-full border border-[#dfe7e4] bg-[#f8faf9] px-3.5 py-1.5 text-xs font-semibold text-[#31433f]">
-              {recommendedBufferSafaris} Buffer
-            </span>
-            <span className="rounded-full border border-[#dfe7e4] bg-[#f8faf9] px-3.5 py-1.5 text-xs font-semibold text-[#31433f]">
-              {recommendedCoreSafaris} Core
-            </span>
-          </div>
-          {recommendation?.tier && (
-            <p className="mt-3 text-xs font-medium text-brand">
-              {recommendation.tier === "primary"
-                ? "Most-preferred combination"
-                : recommendation.tier === "secondary"
-                ? `Second-preference combination — the full ${maximumSafaris}-safari mix was unavailable`
-                : "Buffer-only fallback — mixed Buffer/Core options were unavailable"}
-            </p>
-          )}
-        </div>
-
-        {!isAvailabilityAreaRefreshing && recommendation?.rangeChanged && (
-          <div className="rounded-xl border border-brand/25 bg-accent-light p-4">
-            <p className="text-sm font-semibold text-brand">A better range is available</p>
-            <p className="mt-1 text-xs leading-5 text-muted">
-              The three safari combinations were unavailable in {state.range}. We found this plan in {recommendation.rangeLabel}
-              {recommendation.ranges.length > 1
-                ? " after both the selected and alternate single ranges failed."
-                : " after the selected range's full ladder failed."}
-            </p>
-          </div>
-        )}
-
-        {!isAvailabilityAreaRefreshing && recommendation && recommendation.dayOffset !== null && recommendation.dayOffset !== 0 && (
-          <div className="rounded-xl border border-warning/30 bg-warning/10 p-4">
-            <p className="text-sm font-semibold text-warning">Better availability on nearby dates</p>
-            <p className="mt-1 text-xs leading-5 text-muted">
-              The preferred safari combinations were not available for {formatShort(state.startDate!)}.
-              We found the nearest workable trip {Math.abs(recommendation.dayOffset)} day
-              {Math.abs(recommendation.dayOffset) === 1 ? "" : "s"}{" "}
-              {recommendation.dayOffset < 0 ? "earlier" : "later"}: {formatShort(dates[0])}–
-              {formatShort(dates[dates.length - 1])}, using {recommendation.rangeLabel} after checking the allowed range fallbacks.
-            </p>
-          </div>
-        )}
-
-        <div className="rounded-[24px] border border-[#18212f] bg-[#18212f] p-5 text-white shadow-[0_14px_36px_rgba(24,33,47,0.16)] sm:p-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/55">Vehicle selected automatically</p>
-              <p className="mt-2 text-sm leading-5 text-white/75">
-                Your {occupancy.totalTravellers}-person group needs {occupancy.gypsiesRequired}{" "}
-                {occupancy.gypsiesRequired === 1 ? "gypsy" : "gypsies"} for every safari.
-              </p>
+    <main className="relative min-h-screen bg-[#f4f6f4] pb-32 sm:pb-10">
+      <form onSubmit={handleContinue} className="mx-auto max-w-6xl">
+        <div className="border-b border-[#dde3df] bg-white px-4 pb-1 pt-2 sm:rounded-b-[28px] sm:px-7 sm:shadow-[0_10px_30px_rgba(25,50,40,0.06)]">
+          <div className="relative mx-auto max-w-md">
+            <button type="button" onClick={() => router.push("/book/step-1")} className="absolute left-0 top-5 z-10 flex h-9 w-9 items-center justify-center text-[#111915] transition hover:-translate-x-0.5 hover:text-black" aria-label="Back to trip basics">
+              <BackIcon />
+            </button>
+            <div className="absolute right-0 top-5 z-10 flex items-center gap-1">
+              <button type="button" onClick={() => router.push("/book/step-1")} className="flex h-9 w-7 items-center justify-center text-[#17201c] transition hover:text-[#2e7251]" aria-label="Edit trip basics">
+                <EditIcon />
+              </button>
+              <a href="https://wa.me/?text=Hi%2C%20I%20need%20help%20planning%20my%20safari%20with%20Wild%20Excursions." target="_blank" rel="noreferrer" className="flex h-9 w-7 items-center justify-center text-[#18a957] transition hover:text-[#087a42]" aria-label="Chat on WhatsApp">
+                <WhatsAppIcon />
+              </a>
             </div>
-            <div className="rounded-full bg-accent px-4 py-2 text-sm font-bold text-black">
-              {occupancy.gypsiesRequired} {occupancy.gypsiesRequired === 1 ? "gypsy" : "gypsies"}
+            <StepIndicator current={2} />
+          </div>
+          <div className="mx-auto max-w-4xl pb-5">
+            <div className="min-w-0">
+                <p className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[#3f725b]">Step 2 · Permits & stay</p>
+                <h1 className="font-display mt-1 text-[28px] font-bold leading-tight text-[#15221c] sm:text-4xl">Choose your safari permits</h1>
+                <p className="mt-1.5 text-xs leading-5 text-[#67736d] sm:text-sm">Compare availability like a travel booking app, then tap a permit to add it.</p>
             </div>
           </div>
-          <p className="mt-3 border-t border-white/10 pt-3 text-xs leading-5 text-white/55">
-            Availability numbers are vehicles, not seats. A green “6” means 6 gypsies are open.
-            We only recommend a slot when it has enough vehicles for your whole group.
-          </p>
         </div>
 
-        <div className="flex items-center justify-between rounded-2xl border border-white/80 bg-white/85 px-4 py-3 shadow-[0_8px_24px_rgba(27,72,78,0.07)] backdrop-blur">
-          <span className="flex items-center gap-2 text-xs text-muted">
-            <span className="relative flex h-2 w-2">
-              {!loading && (
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
-              )}
-              <span
-                className={`relative inline-flex h-2 w-2 rounded-full ${loading ? "bg-muted" : "bg-success"}`}
-              />
-            </span>
-            {loading
-              ? "Refreshing…"
-              : `Sample data · refreshed ${
-                  asOf ? (secondsAgo < 5 ? "just now" : `${secondsAgo}s ago`) : "—"
-                }`}
-          </span>
-          <button
-            type="button"
-            onClick={() => setRefreshTick((t) => t + 1)}
-            disabled={loading}
-            className="text-xs font-semibold text-brand hover:underline disabled:opacity-50"
-          >
-            Refresh now
-          </button>
-        </div>
+        <div ref={tripBarSentinelRef} className="h-px" aria-hidden="true" />
+        <div className="relative h-[116px] sm:h-[118px]">
+        <div className={`${isTripBarPinned ? "fixed inset-x-0 top-0 z-50 shadow-[0_4px_12px_rgba(24,33,29,0.08)]" : "absolute inset-x-0 top-0 z-30"} isolate border-b border-[#e0e5e2] bg-white [backface-visibility:hidden]`}>
+          <div className="mx-auto max-w-4xl px-3 py-2.5 sm:px-5">
+            <div className="permit-scroll flex items-center overflow-x-auto rounded-xl bg-[#f2f5f3] px-1.5 py-1">
+              <SummaryChip icon={<MapIcon />} label={recommendation?.rangeLabel ?? state.range ?? "Range"} onClick={() => router.push("/book/step-1?edit=range")} />
+              <span className="h-4 w-px shrink-0 bg-[#d5ddd8]" aria-hidden="true" />
+              <SummaryChip icon={<CalendarIcon />} label={`${dates[0] ? formatShort(dates[0]) : "—"} – ${dates.at(-1) ? formatShort(dates.at(-1)!) : "—"}`} onClick={() => router.push("/book/step-1?edit=date")} />
+              <span className="h-4 w-px shrink-0 bg-[#d5ddd8]" aria-hidden="true" />
+              <SummaryChip icon={<PeopleIcon />} label={`${occupancy.totalTravellers} travellers · ${occupancy.gypsiesRequired} ${occupancy.gypsiesRequired === 1 ? "vehicle" : "vehicles"}`} onClick={() => router.push("/book/step-1?edit=travellers")} />
+            </div>
 
-        {fetchError && <p className="text-sm text-danger">{fetchError}</p>}
-
-        <div
-          aria-busy={isAvailabilityAreaRefreshing}
-          className={`rounded-[26px] border border-white/80 bg-white/92 p-5 shadow-[0_16px_40px_rgba(27,72,78,0.10)] transition-opacity sm:p-6 ${isAvailabilityAreaRefreshing ? "opacity-55" : "opacity-100"}`}
-        >
-          <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-[#236d61]">Start here</p>
-          <label className="font-display mt-1 block text-2xl font-bold text-brand-dark">Your recommended safaris</label>
-          <p className="mb-4 mt-1 text-xs text-muted">
-            Recommendations are not added automatically. Choose the safaris you want to put in your cart.
-          </p>
-          {recommendedPlan.length === 0 ? (
-            loading ? (
-              <p className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted">
-                Checking your dates and nearby availability…
-              </p>
-            ) : (
-              <div className="rounded-xl border border-dashed border-warning/40 bg-warning/10 p-6 text-center">
-                <p className="text-sm font-semibold text-foreground">
-                  No sample safari plan was found for these dates or within 5 days before or after. Choose another date to try again.
-                </p>
+            <div className="mt-2 flex items-stretch gap-2">
+              <div className="date-strip permit-scroll flex min-w-0 flex-1 gap-1 overflow-x-auto rounded-2xl bg-[#f2f5f3] p-1">
+                {requestedDates.map((date, index) => (
+                  <div key={date} className={`min-w-[64px] flex-1 shrink-0 rounded-xl px-2 py-1.5 text-center transition ${index === 0 ? "bg-[#18211d] text-white shadow-sm" : "text-[#435149]"}`}>
+                    <span className={`block text-[8px] font-extrabold uppercase tracking-[0.1em] ${index === 0 ? "text-white/55" : "text-[#8a958f]"}`}>{formatWeekday(date)}</span>
+                    <span className="mt-0.5 block text-base font-extrabold leading-none">{new Date(`${date}T00:00:00`).getDate()}</span>
+                    <span className={`mt-1 block text-[8px] font-semibold ${index === 0 ? "text-white/70" : "text-[#77837c]"}`}>{index === 0 ? "Arrival" : index === requestedDates.length - 1 ? "Departure" : "Safari"}</span>
+                  </div>
+                ))}
               </div>
-            )
-          ) : (
-            <div className="space-y-3">
-              {recommendedPlan.map((safari) => (
-                <ZonePlanCard
-                  key={`${safari.zone.id}-${safari.date}-${safari.session}`}
-                  safari={safari}
-                  isSelected={state.plan.some(
-                    (selected) =>
-                      selected.zone.id === safari.zone.id &&
-                      selected.date === safari.date &&
-                      selected.session === safari.session
-                  )}
-                  onToggle={() => toggleSafari(safari)}
-                />
-              ))}
-            </div>
-          )}
-        </div>
 
-        <div className="rounded-[26px] border border-white/80 bg-white/92 p-5 shadow-[0_16px_40px_rgba(27,72,78,0.10)] sm:p-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-[#236d61]">Try nearby dates</p>
-              <label htmlFor="availability-start-date" className="font-display mt-1 block text-xl font-bold text-brand-dark">
-                Change safari dates
+              <label className="relative flex w-[72px] shrink-0 cursor-pointer flex-col items-center justify-center rounded-2xl border border-[#dce2de] bg-white text-[#304139] transition hover:border-[#789b89] hover:bg-[#f8faf8] sm:w-[108px]">
+                <CalendarEditIcon />
+                <span className="mt-1 text-[9px] font-extrabold">Edit dates</span>
+                <input type="date" min={today} max={PLANNING_HORIZON} value={state.startDate ?? ""} onChange={(event) => changeStartDate(event.target.value)} className="absolute inset-0 cursor-pointer opacity-0" aria-label="Change trip start date" />
               </label>
-              <p className="mt-1 text-xs text-muted">
-                Select a new trip start date. Your {state.nights}N/{state.nights + 1}D availability tables will refresh automatically.
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                disabled={!state.startDate || state.startDate <= today}
-                onClick={() => state.startDate && changeStartDate(shiftISODate(state.startDate, -1))}
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-border text-lg font-semibold text-brand transition hover:border-brand disabled:cursor-not-allowed disabled:opacity-35"
-                aria-label="Previous day"
-                title="Previous day"
-              >
-                ‹
-              </button>
-              <input
-                id="availability-start-date"
-                type="date"
-                min={today}
-                max={planningHorizon}
-                value={state.startDate ?? ""}
-                onChange={(event) => changeStartDate(event.target.value)}
-                className="h-10 min-w-0 rounded-xl border border-[#d9e1de] bg-white px-3 text-sm font-medium outline-none focus:border-[#236d61]"
-              />
-              <button
-                type="button"
-                disabled={!state.startDate || state.startDate >= planningHorizon}
-                onClick={() => state.startDate && changeStartDate(shiftISODate(state.startDate, 1))}
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-border text-lg font-semibold text-brand transition hover:border-brand disabled:cursor-not-allowed disabled:opacity-35"
-                aria-label="Next day"
-                title="Next day"
-              >
-                ›
-              </button>
             </div>
           </div>
-          {dateChangeNotice && (
-            <p className="mt-3 rounded-lg bg-accent-light px-3 py-2 text-xs text-warning">
-              {dateChangeNotice}
-            </p>
-          )}
+        </div>
         </div>
 
-        <div className="relative" aria-busy={isAvailabilityAreaRefreshing}>
-          {isAvailabilityAreaRefreshing && (
-            <div className="absolute inset-0 z-20 flex min-h-72 items-start justify-center rounded-xl bg-surface/75 pt-20 backdrop-blur-[1px]">
-              <div className="flex items-center gap-3 rounded-full border border-brand/20 bg-surface px-5 py-3 text-sm font-semibold text-brand shadow-lg">
-                <span className="h-5 w-5 animate-spin rounded-full border-2 border-brand/25 border-t-brand" />
-                Refreshing safari availability…
-              </div>
+        <div className="mx-3 space-y-5 pt-5 sm:mx-5 sm:space-y-7 sm:pt-7 lg:mx-0">
+          {fetchError && <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-danger">{fetchError}</p>}
+          {dateChangeNotice && <p className="rounded-xl border border-[#c8dccf] bg-[#eef8f1] px-4 py-3 text-xs font-semibold text-[#246441]">{dateChangeNotice}</p>}
+
+          {hasAlternativeRecommendation && recommendation && !isRefreshing && (
+            <div className="rounded-2xl border border-[#cce0d3] bg-[#edf8f1] p-4">
+              <p className="text-sm font-extrabold text-[#185d39]">We found a better available plan</p>
+              <p className="mt-1 text-xs leading-5 text-[#587065]">
+                Your closest workable permits are in {recommendation.rangeLabel}{recommendation.dayOffset ? `, ${Math.abs(recommendation.dayOffset)} day${Math.abs(recommendation.dayOffset) === 1 ? "" : "s"} ${recommendation.dayOffset < 0 ? "earlier" : "later"}` : ""}.
+              </p>
             </div>
           )}
-          <div className={`rounded-[26px] border border-white/80 bg-white/92 p-4 shadow-[0_16px_40px_rgba(27,72,78,0.10)] transition-opacity sm:p-6 ${isAvailabilityAreaRefreshing ? "opacity-45" : "opacity-100"}`}>
-          <div className="mb-5 flex flex-col gap-4 border-b border-[#e7ecea] pb-5 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-[#236d61]">Explore every option</p>
-              <h2 className="font-display mt-1 text-2xl font-bold text-brand-dark">Sample safari slots</h2>
-              <p className="mt-1 text-xs text-muted">Choose an open vehicle count to add or replace a safari.</p>
-            </div>
-            <div className="grid min-w-60 grid-cols-2 rounded-full bg-[#eef3f1] p-1" aria-label="Safari zone type">
-              {(["buffer", "core"] as ZoneType[]).map((zoneType) => (
-                <button
-                  key={zoneType}
-                  type="button"
-                  onClick={() => setActiveZoneType(zoneType)}
-                  className={`rounded-full px-4 py-2.5 text-xs font-bold capitalize transition ${
-                    activeZoneType === zoneType
-                      ? "bg-[#18212f] text-white shadow-[0_6px_16px_rgba(24,33,47,0.20)]"
-                      : "text-muted hover:text-brand"
-                  }`}
-                >
-                  {zoneType} zones
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="space-y-6">
-          {availabilitySections.map((section) => {
-            const zt = activeZoneType;
-            const activeRange = section.range;
-            const curated = isCurated(activeRange, zt);
-            return (
-              <div key={`${section.context}-${activeRange}-${section.dates[0]}-${zt}`}>
-              <div className="mb-2 flex items-center justify-between">
-                <label className="font-display text-lg font-bold capitalize text-brand-dark">
-                  All {zt} zones in {activeRange}
-                    <span className="ml-2 font-sans text-[10px] font-semibold uppercase tracking-wider text-brand">
-                    {section.context === "original" ? "Original search" : "Recommended alternative"}
-                  </span>
-                </label>
-                <span className="text-xs text-muted">Highlighted = in your plan</span>
-              </div>
-              <p className="mb-2 text-xs text-muted">
-                {curated
-                  ? "Every zone for these dates, ranked by sighting quality — this is what the plan above was built from."
-                  : "Every zone for these dates. This isn't reviewed by our team yet, so zones are ordered by current demand — this is what the plan above was built from."}
-              </p>
-              <p className="mb-2 text-xs font-medium text-brand">
-                Select a green slot to add or replace a safari. Select a highlighted slot to remove it.
-              </p>
-              {section.dates.length > 0 && (
-                <AvailabilityGrid
-                  range={activeRange}
-                  zoneType={zt}
-                  dates={section.dates}
-                  plan={state.plan}
-                  availability={availability}
-                  gypsiesRequired={occupancy.gypsiesRequired}
-                  onToggleSelection={handleToggleSelection}
-                />
-              )}
-              </div>
-            );
-          })}
-          </div>
-          </div>
-        </div>
 
-        <div className="rounded-[26px] border border-white/80 bg-white/92 p-5 shadow-[0_16px_40px_rgba(27,72,78,0.10)] sm:p-6">
-          <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-[#236d61]">Complete your trip</p>
-          <label className="font-display mb-3 mt-1 block text-xl font-bold text-brand-dark">Preferred Resort</label>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            {resortsForRange.map((resort) => {
-              const selected = state.resortId === resort.id;
-              return (
-                <button
-                  type="button"
-                  key={resort.id}
-                  onClick={() => handleResortSelection(resort.id)}
-                  className={`rounded-2xl border p-4 text-left transition ${
-                    selected ? "border-accent bg-[#fff8dc] shadow-[0_5px_16px_rgba(253,203,8,0.13)]" : "border-[#e1e7e5] bg-white hover:border-[#9ebbb3]"
-                  }`}
-                >
-                  <p className="text-sm font-semibold">{resort.name}</p>
-                  <p className="text-xs capitalize text-muted">{resort.tier}</p>
-                  <p className="mt-1 text-sm font-medium text-brand">
-                    ₹{resort.pricePerNight.toLocaleString("en-IN")}/night
-                  </p>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-white/80 bg-white/90 p-4 shadow-[0_10px_28px_rgba(27,72,78,0.08)]">
-          <input
-            type="checkbox"
-            checked={state.transfers}
-            onChange={(e) => {
-              update({ transfers: e.target.checked });
-              if (e.target.checked) setCartAnimationKey((key) => key + 1);
-            }}
-            className="h-4 w-4 accent-brand"
-          />
-          <span className="text-sm font-medium">Add transfers (pickup & drop)</span>
-        </label>
-
-        <section
-          id="safari-cart"
-          aria-live="polite"
-          className="overflow-hidden rounded-[24px] border border-[#18212f] bg-white shadow-[0_18px_42px_rgba(24,33,47,0.16)]"
-        >
-          <div
-            key={`cart-heading-${cartAnimationKey}`}
-            className={`flex items-center justify-between bg-[#18212f] px-5 py-4 text-white ${
-              cartAnimationKey > 0 ? "cart-bump" : ""
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              <span className="text-xl" aria-hidden="true">🛒</span>
+          <section className="overflow-hidden rounded-[28px] border border-[#efdda3] bg-[linear-gradient(145deg,#fff5c9_0%,#f7f3df_45%,#e8f6ed_100%)] shadow-[0_16px_38px_rgba(56,65,37,0.10)]">
+            <div className="flex flex-col gap-4 px-5 pb-4 pt-5 sm:flex-row sm:items-center sm:justify-between sm:px-7">
               <div>
-                <h2 className="text-sm font-semibold">Your safari cart</h2>
-                <p className="text-xs text-white/75">
-                  {cartItemCount} {cartItemCount === 1 ? "item" : "items"}
-                </p>
+                <div className="flex items-center gap-2">
+                  <span className="text-xl" aria-hidden="true">👍</span>
+                  <p className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[#536c31]">Handpicked for your trip</p>
+                </div>
+                <h2 className="font-display mt-1 text-2xl font-bold text-[#18211d]">Recommended permits</h2>
+                <p className="mt-1 text-xs text-[#657068]">Best available mix based on zone priority and your dates.</p>
+              </div>
+              {recommendedPlan.length > 0 && (
+                <button type="button" onClick={addRecommendedPlan} className="rounded-xl bg-[#18211d] px-4 py-2.5 text-xs font-extrabold text-white shadow-lg transition hover:bg-black">
+                  Add all {recommendedPlan.length} permits
+                </button>
+              )}
+            </div>
+
+            {recommendedPlan.length === 0 ? (
+              <div className="mx-5 mb-5 rounded-2xl border border-dashed border-[#c9b76f] bg-white/55 p-8 text-center text-sm text-[#6a6246] sm:mx-7">
+                {loading ? "Finding the best permit combination…" : "No complete permit plan was found. Try nearby dates below."}
+              </div>
+            ) : (
+              <div className="permit-scroll flex snap-x snap-mandatory gap-3 overflow-x-auto px-5 pb-6 sm:grid sm:grid-cols-3 sm:px-7">
+                {recommendedPlan.map((safari) => (
+                  <ZonePlanCard
+                    key={`${safari.zone.id}-${safari.date}-${safari.session}`}
+                    safari={safari}
+                    isSelected={state.plan.some((item) => item.zone.id === safari.zone.id && item.date === safari.date && item.session === safari.session)}
+                    onToggle={() => toggleSafari(safari)}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section className="relative -mx-3 bg-[#f9fbf9] px-3 py-5 sm:-mx-5 sm:px-5 sm:py-7 lg:mx-0 lg:px-7" aria-busy={isRefreshing}>
+            {isRefreshing && (
+              <div className="absolute inset-0 z-20 flex items-start justify-center bg-white/75 pt-28 backdrop-blur-sm">
+                <span className="rounded-full bg-[#18211d] px-5 py-3 text-xs font-bold text-white shadow-xl">Refreshing permits…</span>
+              </div>
+            )}
+            <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[#3f725b]">All available options</p>
+                <h2 className="font-display mt-1 text-2xl font-bold text-[#18211d]">Compare safari permits</h2>
+                <p className="mt-1 text-xs text-[#68756f]">Swipe across permits. One permit can be selected for each safari session.</p>
+              </div>
+              <div className="grid grid-cols-2 rounded-xl bg-[#e8ece9] p-1" aria-label="Safari permit type">
+                {(["buffer", "core"] as ZoneType[]).map((zoneType) => (
+                  <button key={zoneType} type="button" onClick={() => setActiveZoneType(zoneType)} className={`rounded-[10px] px-5 py-2.5 text-xs font-extrabold capitalize transition ${activeZoneType === zoneType ? "bg-[#18211d] text-white shadow-md" : "text-[#66736d]"}`}>
+                    {zoneType} permits
+                  </button>
+                ))}
               </div>
             </div>
-            <p className="font-semibold">₹{cartTotal.toLocaleString("en-IN")}</p>
-          </div>
 
-          {cartItemCount === 0 ? (
-            <p className="p-5 text-center text-sm text-muted">
-              Your cart is empty. Add at least one recommended or sample-availability safari.
-            </p>
-          ) : (
-            <div className="divide-y divide-border">
-              {state.plan.map((safari) => (
-                <div
-                  key={`cart-${safari.zone.id}-${safari.date}-${safari.session}`}
-                  className="cart-item-in flex items-center justify-between gap-3 px-4 py-3"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold">{safari.zone.name} safari</p>
-                    <p className="text-xs text-muted">
-                      {formatShort(safari.date)} · {safari.session === "morning" ? "Morning" : "Afternoon"} ·{" "}
-                      {safari.gypsiesRequired} {safari.gypsiesRequired === 1 ? "gypsy" : "gypsies"}
-                    </p>
+            <div className="space-y-7">
+              {availabilitySections.map((section) => (
+                <div key={`${section.context}-${section.range}-${section.dates[0]}-${activeZoneType}`}>
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <div>
+                      <h3 className="text-sm font-extrabold capitalize text-[#203028]">{activeZoneType} zones in {section.range}</h3>
+                      <p className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.1em] text-[#7b8881]">{section.context === "original" ? "Your original search" : "Recommended alternative"}</p>
+                    </div>
+                    <span className="hidden rounded-full border border-[#d8e0dc] bg-white px-3 py-1 text-[10px] font-semibold text-[#64736b] sm:inline">Green = available</span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => toggleSafari(safari)}
-                    className="shrink-0 text-xs font-semibold text-danger hover:underline"
-                  >
-                    Remove
-                  </button>
+                  <AvailabilityGrid
+                    range={section.range}
+                    zoneType={activeZoneType}
+                    dates={section.dates}
+                    plan={state.plan}
+                    availability={availability}
+                    gypsiesRequired={occupancy.gypsiesRequired}
+                    onToggleSelection={handleToggleSelection}
+                  />
                 </div>
               ))}
-
-              {selectedResort && (
-                <div className="cart-item-in flex items-center justify-between gap-3 px-4 py-3">
-                  <div>
-                    <p className="text-sm font-semibold">{selectedResort.name}</p>
-                    <p className="text-xs text-muted">
-                      Resort · {state.nights} night{state.nights === 1 ? "" : "s"}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => update({ resortId: null })}
-                    className="text-xs font-semibold text-danger hover:underline"
-                  >
-                    Remove
-                  </button>
-                </div>
-              )}
-
-              {state.transfers && (
-                <div className="cart-item-in flex items-center justify-between gap-3 px-4 py-3">
-                  <div>
-                    <p className="text-sm font-semibold">Pickup & drop transfers</p>
-                    <p className="text-xs text-muted">Added to your trip</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => update({ transfers: false })}
-                    className="text-xs font-semibold text-danger hover:underline"
-                  >
-                    Remove
-                  </button>
-                </div>
-              )}
             </div>
-          )}
-        </section>
+          </section>
 
-        {error && <p className="text-sm text-danger">{error}</p>}
+          <div>
+            <section id="safari-cart" className="overflow-hidden rounded-[26px] border border-[#18211d] bg-white shadow-[0_14px_34px_rgba(24,33,29,0.13)]">
+              <div key={cartAnimationKey} className={`bg-[#18211d] p-5 text-white ${cartAnimationKey > 0 ? "cart-bump" : ""}`}>
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/50">Your trip</p>
+                    <h2 className="mt-1 text-lg font-extrabold">Booking summary</h2>
+                  </div>
+                  <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold">{cartItemCount} items</span>
+                </div>
+                <p className="mt-5 text-3xl font-extrabold">₹{cartTotal.toLocaleString("en-IN")}</p>
+                <p className="mt-1 text-[10px] text-white/55">Estimated total · sample pricing</p>
+              </div>
 
-        <div className="flex gap-3">
-          <button
-            type="button"
-            onClick={() => router.push("/book/step-1")}
-            className="rounded-2xl border border-[#d9e1de] bg-white px-5 py-3.5 font-semibold text-foreground transition hover:border-brand"
-          >
-            Back
-          </button>
-          <button
-            type="submit"
-            disabled={loading}
-            className="flex-1 rounded-2xl bg-accent py-3.5 font-bold text-black shadow-[0_10px_24px_rgba(253,203,8,0.24)] transition hover:bg-[#e7b900] disabled:opacity-50"
-          >
-            {loading ? "Checking availability…" : "Continue"}
-          </button>
+              <div className="divide-y divide-[#e7ebe8]">
+                {state.plan.length === 0 && !state.transfers ? (
+                  <p className="p-6 text-center text-xs leading-5 text-[#718078]">Your plan is empty. Start with a recommended permit.</p>
+                ) : (
+                  <>
+                    {state.plan.map((safari) => (
+                      <div key={`${safari.zone.id}-${safari.date}-${safari.session}`} className="cart-item-in flex items-center justify-between gap-3 px-4 py-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-xs font-extrabold text-[#203028]">{safari.zone.name} permit</p>
+                          <p className="mt-0.5 text-[10px] text-[#718078]">{formatShort(safari.date)} · {safari.session === "morning" ? "Morning" : "Afternoon"}</p>
+                        </div>
+                        <button type="button" onClick={() => toggleSafari(safari)} className="text-[10px] font-extrabold text-danger hover:underline">Remove</button>
+                      </div>
+                    ))}
+                    {state.transfers && (
+                      <div className="cart-item-in flex items-center justify-between gap-3 px-4 py-3">
+                        <div><p className="text-xs font-extrabold text-[#203028]">Pickup & drop transfers</p><p className="mt-0.5 text-[10px] text-[#718078]">Complete trip</p></div>
+                        <button type="button" onClick={() => update({ transfers: false })} className="text-[10px] font-extrabold text-danger hover:underline">Remove</button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </section>
+          </div>
+
+          {error && <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-center text-sm font-semibold text-danger" role="alert">{error}</p>}
+
+          <div className="hidden items-center justify-between rounded-[24px] border border-[#dfe4e1] bg-white p-4 shadow-lg sm:flex">
+            <button type="button" onClick={() => router.push("/book/step-1")} className="rounded-xl border border-[#d8dfdb] px-5 py-3 text-sm font-bold text-[#26372f]">Back</button>
+            <div className="flex items-center gap-5">
+              <div className="text-right"><p className="text-[10px] font-semibold text-[#748078]">Estimated total</p><p className="text-lg font-extrabold text-[#18211d]">₹{cartTotal.toLocaleString("en-IN")}</p></div>
+              <button type="submit" disabled={loading} className="rounded-xl bg-[#fdcb08] px-8 py-3.5 text-sm font-extrabold text-black shadow-[0_8px_20px_rgba(253,203,8,0.28)] hover:bg-[#edbd00] disabled:opacity-50">Continue to review →</button>
+            </div>
+          </div>
+        </div>
+
+        <div className="fixed inset-x-0 bottom-0 z-50 border-t border-[#d8dedb] bg-white/95 px-4 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 shadow-[0_-8px_28px_rgba(24,33,29,0.12)] backdrop-blur-xl sm:hidden">
+          {error && <p className="mb-2 text-center text-[10px] font-bold text-danger">{error}</p>}
+          <div className="mx-auto flex max-w-xl items-center gap-3">
+            <button type="button" onClick={() => document.getElementById("safari-cart")?.scrollIntoView({ behavior: "smooth" })} className="min-w-0 flex-1 text-left">
+              <span className="block text-[10px] font-semibold text-[#748078]">{cartItemCount} items · View plan</span>
+              <span className="block text-lg font-extrabold text-[#18211d]">₹{cartTotal.toLocaleString("en-IN")}</span>
+            </button>
+            <button type="submit" disabled={loading} className="rounded-xl bg-[#fdcb08] px-5 py-3.5 text-sm font-extrabold text-black shadow-[0_8px_20px_rgba(253,203,8,0.28)] disabled:opacity-50">Continue →</button>
+          </div>
         </div>
       </form>
+    </main>
+  );
+}
 
-      {cartItemCount > 0 && (
-        <button
-          key={`floating-cart-${cartAnimationKey}`}
-          type="button"
-          onClick={() => document.getElementById("safari-cart")?.scrollIntoView({ behavior: "smooth" })}
-          className={`fixed bottom-20 left-1/2 z-50 flex w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 items-center justify-between rounded-2xl bg-[#18212f] px-5 py-3 text-left text-white shadow-2xl sm:hidden ${
-            cartAnimationKey > 0 ? "cart-bump" : ""
-          }`}
-        >
-          <span>
-            <span className="block text-sm font-semibold">🛒 {cartItemCount} {cartItemCount === 1 ? "item" : "items"}</span>
-            <span className="block text-xs text-white/75">Tap to view cart</span>
-          </span>
-          <span className="font-bold">₹{cartTotal.toLocaleString("en-IN")}</span>
-        </button>
-      )}
-      </div>
-    </div>
+function SummaryChip({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick} className="inline-flex shrink-0 items-center gap-1.5 rounded-lg px-2 py-1 text-[10px] font-bold text-[#34443c] transition hover:bg-white hover:text-[#175f3b] focus-visible:bg-white focus-visible:outline-2 focus-visible:outline-[#2e7251] sm:px-3 sm:text-[11px]">
+      {icon}
+      <span>{label}</span>
+      <svg aria-hidden="true" viewBox="0 0 16 16" className="h-3 w-3 text-[#819087]" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="m6 4 4 4-4 4" strokeLinecap="round" strokeLinejoin="round" /></svg>
+    </button>
   );
 }
 
 function formatShort(iso: string) {
-  return new Date(iso + "T00:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+  return new Date(`${iso}T00:00:00`).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
 }
 
-function shiftISODate(iso: string, days: number): string {
-  const date = new Date(iso + "T00:00:00");
+function formatWeekday(iso: string) {
+  return new Date(`${iso}T00:00:00`).toLocaleDateString("en-IN", { weekday: "short" });
+}
+
+function shiftISODate(iso: string, days: number) {
+  const date = new Date(`${iso}T00:00:00`);
   date.setDate(date.getDate() + days);
   return toLocalISODate(date);
+}
+
+function BackIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2.8"><path d="M20 12H4m7-7-7 7 7 7" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+}
+function EditIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24" className="h-[22px] w-[22px]" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25Zm17.71-10.04a.996.996 0 0 0 0-1.41l-2.51-2.51a.996.996 0 0 0-1.41 0l-1.96 1.96 3.75 3.75 2.13-1.79Z" /></svg>;
+}
+function WhatsAppIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24" className="h-[25px] w-[25px]" fill="currentColor"><path d="M12.04 2a9.84 9.84 0 0 0-8.42 14.94L2.05 22l5.19-1.36A9.84 9.84 0 1 0 12.04 2Zm0 17.97a8.15 8.15 0 0 1-4.15-1.14l-.3-.18-3.08.81.82-3-.2-.31a8.12 8.12 0 1 1 6.91 3.82Zm4.46-6.1c-.24-.12-1.44-.71-1.66-.79-.22-.08-.38-.12-.54.12-.16.24-.63.79-.77.95-.14.16-.28.18-.52.06-.24-.12-1.03-.38-1.96-1.21-.72-.65-1.21-1.44-1.35-1.69-.14-.24-.01-.37.11-.49.11-.11.24-.28.36-.42.12-.14.16-.24.24-.4.08-.16.04-.3-.02-.42-.06-.12-.54-1.3-.74-1.78-.2-.47-.4-.4-.54-.41h-.46c-.16 0-.42.06-.64.3-.22.24-.84.82-.84 2s.86 2.32.98 2.48c.12.16 1.69 2.58 4.1 3.62.57.25 1.02.4 1.37.51.58.18 1.1.15 1.52.09.46-.07 1.44-.59 1.64-1.16.2-.57.2-1.06.14-1.16-.06-.1-.22-.16-.46-.28Z" /></svg>;
+}
+function MapIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4 text-[#2e7251]" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 21s6-5.1 6-11a6 6 0 1 0-12 0c0 5.9 6 11 6 11Z" /><circle cx="12" cy="10" r="2" /></svg>;
+}
+function CalendarIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4 text-[#2e7251]" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="4" y="5" width="16" height="15" rx="2" /><path d="M8 3v4M16 3v4M4 10h16" /></svg>;
+}
+function CalendarEditIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5 text-[#2e7251]" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3.5" y="5" width="17" height="15" rx="2.5" /><path d="M8 3v4M16 3v4M3.5 10h17M14.5 15.5h3M16 14v3" strokeLinecap="round" /></svg>;
+}
+function PeopleIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4 text-[#2e7251]" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="9" cy="8" r="3" /><path d="M3 20a6 6 0 0 1 12 0M16 5.5a3 3 0 0 1 0 5.5M16 14a5 5 0 0 1 5 5" strokeLinecap="round" /></svg>;
 }

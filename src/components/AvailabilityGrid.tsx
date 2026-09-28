@@ -1,13 +1,7 @@
 import { rankZonesForRange } from "@/lib/engine";
-import { tripSlots } from "@/lib/mockData";
+import { PRICING, tripSlots } from "@/lib/mockData";
 import type { AvailabilitySnapshot, RecommendedSafari, Zone, ZoneType } from "@/lib/types";
 
-const SESSIONS: Array<"morning" | "afternoon"> = ["morning", "afternoon"];
-
-// The real portal caps a gate at 6 open gypsies per session — confirmed
-// across every live scrape this session (never seen a count above 6).
-// Used as the shown count for provisional (beyond-real-coverage) slots,
-// since there's no real count to report yet for those.
 const MAX_GYPSIES = 6;
 
 export type AvailabilitySelection = {
@@ -34,180 +28,167 @@ export function AvailabilityGrid({
   dates: string[];
   plan: RecommendedSafari[];
   availability: AvailabilitySnapshot[];
-  /** Real max(safari_date) — dates past this display as Available too
-   * (customer-facing UI doesn't distinguish them; see RecommendedSafari.
-   * isProvisional for where that distinction is kept, internally only,
-   * for the team's own enquiry handling). Pass null to leave dates
-   * beyond real data as "—" instead. */
   maxScrapedDate?: string | null;
   gypsiesRequired?: number;
   onToggleSelection?: (selection: AvailabilitySelection) => void;
 }) {
-  const zonesInRange = rankZonesForRange(range, zoneType, availability);
-  const validSlots = new Set(tripSlots(dates).map((s) => `${s.date}|${s.session}`));
-
-  const statusFor = (zoneId: string, date: string, session: string) =>
-    availability.find((a) => a.zoneId === zoneId && a.date === date && a.session === session);
-
-  const isPicked = (zoneId: string, date: string, session: string) =>
-    plan.some((p) => p.zone.id === zoneId && p.date === date && p.session === session);
+  const zones = rankZonesForRange(range, zoneType, availability);
+  const slots = tripSlots(dates);
+  const permitPrice = PRICING.permitPerSafari * gypsiesRequired;
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-[#dfe7e4] bg-white shadow-[0_6px_18px_rgba(27,72,78,0.07)]">
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[560px] border-collapse text-sm">
-          <thead>
-            <tr className="bg-[#f1f5f3]">
-              <th className="sticky left-0 z-10 bg-[#f1f5f3] px-3 py-3 text-left text-xs font-semibold text-[#45615a]">
-                Zone (priority order)
-              </th>
-              {dates.map((date) => (
-                <th
-                  key={date}
-                  colSpan={SESSIONS.length}
-                  className="border-l border-border px-2 py-2.5 text-center text-xs font-semibold text-foreground"
+    <div className="space-y-4">
+      {zones.map(({ zone, rank, isDemandBased }) => (
+        <article
+          key={zone.id}
+          className="overflow-hidden rounded-[22px] border border-[#e1e5e2] bg-white shadow-[0_8px_24px_rgba(30,54,45,0.07)]"
+        >
+          <header className="flex items-center justify-between gap-3 border-b border-[#edf0ee] px-4 py-3.5 sm:px-5">
+            <div className="flex min-w-0 items-center gap-3">
+              <ZoneMonogram name={zone.name} />
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <h4 className="truncate text-sm font-extrabold text-[#18211d]">{zone.name}</h4>
+                  <span className="rounded-full bg-[#f0f3f1] px-2 py-0.5 text-[9px] font-extrabold text-[#64736b]">#{rank}</span>
+                </div>
+                <p className="mt-0.5 truncate text-[10px] font-medium text-[#738079]">
+                  {zone.type === "core" ? "Core" : "Buffer"} zone · Gate {zone.gate}
+                </p>
+              </div>
+            </div>
+            <div className="shrink-0 text-right">
+              <p className="text-sm font-extrabold text-[#1d3e2e]">₹{permitPrice.toLocaleString("en-IN")}</p>
+              <p className="mt-0.5 text-[9px] font-bold uppercase tracking-wider text-[#8a958f]">per permit</p>
+            </div>
+          </header>
+
+          <div className="flex items-center justify-between px-4 pt-3 sm:px-5">
+            <p className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#64736b]">Choose a date & session</p>
+            <span className="text-[9px] font-bold text-[#89958f]">Swipe dates →</span>
+          </div>
+
+          <div className="permit-scroll flex snap-x snap-mandatory gap-3 overflow-x-auto pb-4 pt-2.5">
+            {slots.map(({ date, session }) => {
+              const snapshot = availability.find(
+                (item) => item.zoneId === zone.id && item.date === date && item.session === session
+              );
+              const selected = plan.some(
+                (item) => item.zone.id === zone.id && item.date === date && item.session === session
+              );
+              const beyondCoverage = !snapshot && Boolean(maxScrapedDate) && date > maxScrapedDate!;
+              const portalAvailable = snapshot?.status === "available" || beyondCoverage;
+              const vehicleCount = beyondCoverage ? MAX_GYPSIES : snapshot?.availableCount ?? 0;
+              const isAvailable = portalAvailable && vehicleCount >= gypsiesRequired;
+              const shortfall = portalAvailable && vehicleCount < gypsiesRequired;
+              const status = availabilityLabel(snapshot?.status, shortfall);
+              const disabled = !onToggleSelection || (!selected && !isAvailable);
+
+              return (
+                <button
+                  type="button"
+                  key={`${date}-${session}`}
+                  aria-pressed={selected}
+                  disabled={disabled}
+                  onClick={() =>
+                    onToggleSelection?.({
+                      zone,
+                      date,
+                      session,
+                      rank,
+                      isDemandBased,
+                      isProvisional: beyondCoverage,
+                    })
+                  }
+                  className={`first:ml-4 last:mr-4 w-[68vw] max-w-[244px] shrink-0 snap-start scroll-ml-4 overflow-hidden rounded-2xl border text-left transition active:scale-[0.98] sm:first:ml-5 sm:last:mr-5 sm:scroll-ml-5 ${
+                    selected
+                      ? "border-[#2e7251] bg-[#eef8f1] shadow-[0_8px_20px_rgba(46,114,81,0.16)]"
+                      : isAvailable
+                        ? "border-[#abd9ba] bg-[#f1faf3] hover:-translate-y-0.5 hover:border-[#218552]"
+                        : "border-[#eaded8] bg-[#fbf7f5] opacity-75"
+                  }`}
                 >
-                  {formatShort(date)}
-                </th>
-              ))}
-            </tr>
-            <tr className="bg-[#f1f5f3]">
-              <th className="sticky left-0 z-10 bg-[#f1f5f3] px-3 py-1.5"></th>
-              {dates.map((date) =>
-                SESSIONS.map((s) => (
-                  <th
-                    key={date + s}
-                    className="border-l border-t border-border px-2 py-1.5 text-center text-[11px] font-medium text-muted"
-                  >
-                    {s === "morning" ? "Morning" : "Evening"}
-                  </th>
-                ))
-              )}
-            </tr>
-          </thead>
-          <tbody>
-            {zonesInRange.map(({ zone, rank, isDemandBased }) => (
-              <tr key={zone.id} className="border-t border-border">
-                <td className="sticky left-0 z-10 whitespace-nowrap bg-white px-3 py-2.5 font-medium">
-                  <span className="flex items-center gap-1.5">
-                    <span
-                      className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-bold ${
-                        isDemandBased
-                          ? "border-[1.5px] border-accent text-accent"
-                          : "bg-accent text-brand-dark"
-                      }`}
-                      title={isDemandBased ? "Ranked by current demand — not yet reviewed by our team" : undefined}
-                    >
-                      {rank}
+                  <span className={`flex items-center justify-between gap-2 border-b px-3 py-2 ${
+                    selected
+                      ? "border-[#245e41] bg-[#2e7251] text-white"
+                      : isAvailable
+                        ? "border-[#c2e4cb] bg-[#d8f2df] text-[#173b28]"
+                        : "border-[#eaded8] bg-[#f4e6df] text-[#684b3e]"
+                  }`}>
+                    <span>
+                      <span className="block text-xs font-extrabold">{formatLong(date)}</span>
+                      <span className={`mt-0.5 flex items-center gap-1 text-[9px] font-bold ${selected ? "text-white/70" : "opacity-70"}`}>
+                        {session === "morning" ? <SunriseIcon /> : <SunsetIcon />}
+                        {session === "morning" ? "Morning safari" : "Evening safari"}
+                      </span>
                     </span>
-                    {zone.name}
+                    {selected && <span className="rounded-full bg-white/15 px-2 py-1 text-[9px] font-extrabold">Selected</span>}
                   </span>
-                </td>
-                {dates.map((date) =>
-                  SESSIONS.map((s) => {
-                    const isTripSlot = validSlots.has(`${date}|${s}`);
-                    const snap = statusFor(zone.id, date, s);
-                    const picked = isPicked(zone.id, date, s);
-                    const beyondCoverage = !snap && !!maxScrapedDate && date > maxScrapedDate;
-                    const portalAvailable = snap?.status === "available" || beyondCoverage;
-                    const noInfo = !snap && !beyondCoverage;
-                    const gypsyCount = beyondCoverage ? MAX_GYPSIES : snap?.availableCount ?? MAX_GYPSIES;
-                    const hasEnoughGypsies = portalAvailable && gypsyCount >= gypsiesRequired;
-                    const insufficient = portalAvailable && !hasEnoughGypsies;
-                    const unavailableLabel =
-                      snap?.status === "NA"
-                        ? "Not listed"
-                        : snap?.status === "gate-closed"
-                        ? "Gate closed"
-                        : snap?.status === "window-closed"
-                        ? "Window closed"
-                        : snap?.status === "waitlist"
-                        ? "Waitlist"
-                        : "Sold out";
-                    const label = noInfo
-                      ? "—"
-                      : hasEnoughGypsies
-                      ? String(gypsyCount)
-                      : insufficient
-                      ? `${gypsyCount} left · need ${gypsiesRequired}`
-                      : unavailableLabel;
-                    const availabilityTitle = noInfo
-                      ? "Availability has not been checked for this slot"
-                      : portalAvailable
-                      ? `${gypsyCount} ${gypsyCount === 1 ? "gypsy" : "gypsies"} open; your group needs ${gypsiesRequired}`
-                      : snap?.status === "NA"
-                      ? "The government regular-booking feed does not list this gate for this slot"
-                      : "No gypsies are open for this slot";
-                    return (
-                      <td
-                        key={date + s}
-                        className={`border-l border-border p-1 text-center align-middle ${
-                            picked ? "bg-[#fff3be]" : !isTripSlot ? "bg-[#fafafa]" : ""
-                        }`}
-                      >
-                        <button
-                          type="button"
-                          disabled={
-                            !onToggleSelection ||
-                            (!picked && (!isTripSlot || noInfo || !hasEnoughGypsies))
-                          }
-                          onClick={() =>
-                            onToggleSelection?.({
-                              zone,
-                              date,
-                              session: s,
-                              rank,
-                              isDemandBased,
-                              isProvisional: beyondCoverage,
-                            })
-                          }
-                          title={
-                            !isTripSlot
-                              ? date === dates[0]
-                                ? "Arrival day — this safari isn't part of your itinerary (you're still travelling in)"
-                                : "Departure day — this safari isn't part of your itinerary (you're checking out)"
-                              : availabilityTitle
-                          }
-                        className={`mx-auto flex min-h-8 items-center justify-center gap-1 whitespace-nowrap rounded-lg px-2 py-1.5 text-[11px] font-semibold transition enabled:cursor-pointer enabled:hover:ring-2 enabled:hover:ring-[#236d61]/25 disabled:cursor-default ${
-                            !isTripSlot
-                              ? "opacity-50"
-                              : ""
-                          } ${
-                            noInfo
-                              ? "text-muted"
-                              : hasEnoughGypsies
-                              ? "bg-success/15 text-success"
-                              : insufficient
-                              ? "bg-warning/10 text-warning"
-                              : "bg-danger/10 text-danger"
-                          }`}
-                        >
-                          {!noInfo && (
-                            <span
-                              className={`h-1.5 w-1.5 shrink-0 rounded-full ${
-                                hasEnoughGypsies
-                                  ? "bg-success"
-                                  : insufficient
-                                  ? "bg-warning"
-                                  : "bg-danger"
-                              }`}
-                            />
-                          )}
-                          {label}
-                        </button>
-                      </td>
-                    );
-                  })
-                )}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+
+                  <span className="block px-3 py-2.5">
+                    <span className={`flex items-center gap-1.5 text-[13px] font-extrabold ${selected ? "text-[#17633b]" : isAvailable ? "text-[#08752f]" : "text-[#9a4e2c]"}`}>
+                      {selected ? <CheckIcon /> : isAvailable ? <SparkIcon /> : <ClockIcon />}
+                      {selected ? "Added to your plan" : isAvailable ? `Available ${vehicleCount} Gypsy` : status}
+                    </span>
+                    <span className={`mt-2 flex items-center justify-between gap-2 text-[9px] ${selected ? "text-[#456555]" : "text-[#637169]"}`}>
+                      <span className="font-semibold">Zone Rating: {getZoneRating(rank)} ★</span>
+                      <span>{selected ? "Remove" : isAvailable ? "Select →" : "Unavailable"}</span>
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </article>
+      ))}
     </div>
   );
 }
 
-function formatShort(iso: string) {
-  return new Date(iso + "T00:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+function availabilityLabel(status: AvailabilitySnapshot["status"] | undefined, shortfall: boolean) {
+  if (shortfall) return "Not enough vehicles";
+  if (status === "waitlist") return "Waitlist";
+  if (status === "gate-closed") return "Gate closed";
+  if (status === "window-closed") return "Booking not open";
+  if (status === "NA") return "Not listed";
+  return "Sold out";
+}
+
+function formatLong(iso: string) {
+  return new Date(`${iso}T00:00:00`).toLocaleDateString("en-IN", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  });
+}
+
+function getZoneRating(rank: number) {
+  return Math.max(3.5, 4.9 - rank * 0.15).toFixed(1);
+}
+
+function ZoneMonogram({ name }: { name: string }) {
+  return (
+    <span aria-hidden="true" className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[linear-gradient(145deg,#d9f0e1,#f3faf5)] text-lg font-black text-[#17633b] shadow-[inset_0_0_0_1px_rgba(46,114,81,0.08)]">
+      {name.charAt(0).toUpperCase()}
+    </span>
+  );
+}
+
+function SunriseIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 18h16M6 14a6 6 0 0 1 12 0M12 3v3M4.2 7.2l2.1 2.1M19.8 7.2l-2.1 2.1" strokeLinecap="round" /></svg>;
+}
+
+function SunsetIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 18h16M6 14a6 6 0 0 1 12 0M12 3v3M8 21h8" strokeLinecap="round" /></svg>;
+}
+
+function CheckIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="m5 12 4 4L19 6" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+}
+
+function SparkIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M9 17h6M10 21h4M8.5 14.5a6 6 0 1 1 7 0c-.9.7-1.4 1.4-1.5 2.5h-4c-.1-1.1-.6-1.8-1.5-2.5Z" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+}
+
+function ClockIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="8" /><path d="M12 8v5l3 2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 }

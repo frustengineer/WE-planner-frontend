@@ -17,11 +17,15 @@ export function Header() {
 
   if (pathname.startsWith("/book/step-2") || pathname.startsWith("/book/step-3") || pathname.startsWith("/book/step-4")) return null;
 
+  const isHome = pathname === "/";
+
   return (
     <div className="sticky top-3 z-40 mx-3 sm:mx-6">
       <nav
         aria-label="Main navigation"
-        className="wild-navbar-glass mx-auto flex w-auto max-w-[1640px] items-center justify-between rounded-[1.6rem] px-4 py-3 sm:px-6 lg:px-8"
+        className={`wild-navbar-glass mx-auto flex w-auto max-w-[1640px] items-center justify-between rounded-[1.6rem] px-4 py-3 sm:px-6 lg:px-8 ${
+          isHome ? "wild-navbar-glass--solid" : ""
+        }`}
       >
         <Link href="/" className="flex items-center gap-3" aria-label="Wild Excursions home">
           <Image

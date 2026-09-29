@@ -54,6 +54,12 @@ body {
   -webkit-backdrop-filter: blur(18px) saturate(140%);
 }
 
+.wild-navbar-glass--solid {
+  background: rgba(10, 10, 10, 0.78);
+  backdrop-filter: blur(22px) saturate(160%);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
+}
+
 .wild-nav-link {
   position: relative;
   display: inline-flex;
@@ -220,4 +226,22 @@ a {
   height: 10px;
   background: radial-gradient(circle at 9px 0, #adf0b8 8px, transparent 8.5px) 0 0 / 18px 10px repeat-x;
   pointer-events: none;
+}
+
+.resort-offer-edge::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: -9px;
+  left: 0;
+  height: 10px;
+  background: radial-gradient(circle at 9px 0, #ffe36d 8px, transparent 8.5px) 0 0 / 18px 10px repeat-x;
+  pointer-events: none;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }

@@ -1,14 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 
 function MobileBottomNavInner() {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const onStep1 = pathname.startsWith("/book/step-1");
-  const wantsStay = searchParams.get("service") === "stay";
 
   const [hidden, setHidden] = useState(false);
   const lastScrollY = useRef(0);
@@ -31,6 +29,8 @@ function MobileBottomNavInner() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  if (pathname.startsWith("/book/step-2") || pathname.startsWith("/book/step-3") || pathname.startsWith("/book/step-4")) return null;
+
   return (
     <nav
       className={`fixed inset-x-4 bottom-3 z-40 grid grid-cols-4 gap-1 rounded-[20px] border border-[#ececec] bg-white/95 px-1.5 py-2 pb-[calc(.5rem+env(safe-area-inset-bottom))] font-[family-name:var(--font-poppins)] shadow-[0_10px_24px_rgba(0,0,0,.1)] backdrop-blur-xl transition-transform duration-300 ease-out sm:hidden ${
@@ -39,19 +39,15 @@ function MobileBottomNavInner() {
       aria-label="Mobile navigation"
     >
       <MobileNavItem href="/" icon="home" label="Home" active={pathname === "/"} />
-      <MobileNavItem href="/book/step-1" icon="safari" label="Safari" active={onStep1 && !wantsStay} />
-      <MobileNavItem href="/book/step-1?service=stay" icon="stay" label="Stay" active={onStep1 && wantsStay} />
-      <MobileNavItem href="/book/step-3" icon="booking" label="Booking" active={pathname.startsWith("/book/step-3") || pathname.startsWith("/book/step-4")} />
+      <MobileNavItem href="/book/step-1" icon="safari" label="Safari" active={onStep1} />
+      <MobileNavItem href="/book/step-3" icon="stay" label="Stay" active={pathname.startsWith("/book/step-3")} />
+      <MobileNavItem href="/book/step-4" icon="booking" label="Booking" active={pathname.startsWith("/book/step-4")} />
     </nav>
   );
 }
 
 export function MobileBottomNav() {
-  return (
-    <Suspense fallback={null}>
-      <MobileBottomNavInner />
-    </Suspense>
-  );
+  return <MobileBottomNavInner />;
 }
 
 function MobileNavItem({

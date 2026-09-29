@@ -26,7 +26,7 @@ export const JUNGLES: Jungle[] = [
     animals: ["Tiger", "Leopard", "Wild dog", "Gaur", "Indian wolf"],
     bestSeason: "November to May, with warm-season drives offering the best chances around water.",
     state: "Madhya Pradesh",
-    image: image("66898"),
+    image: image("145939"),
   },
   {
     slug: "bandhavgarh",

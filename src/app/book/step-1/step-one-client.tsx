@@ -146,8 +146,8 @@ export function StepOneClient({ jungles }: { jungles: Jungle[] }) {
       <div className="relative">
         <SafariHero onBack={() => router.push("/")} />
 
-      <form onSubmit={handleContinue} className="relative z-10 -mt-[16px] mx-3 overflow-hidden rounded-[30px] border border-white/80 bg-white/90 shadow-[0_24px_55px_rgba(120,90,0,0.22)] backdrop-blur-xl sm:mx-auto sm:max-w-3xl">
-        <OfferBanner />
+      <form onSubmit={handleContinue} className="relative z-10 -mt-8 mx-3 overflow-hidden rounded-[30px] bg-white/90 shadow-[0_24px_55px_rgba(120,90,0,0.22)] backdrop-blur-xl sm:mx-auto sm:max-w-3xl">
+
 
         <div className="space-y-3 bg-white/55 p-4 pb-5 sm:p-6">
           <SelectionButton icon="jungle" label="Which jungle" value={jungle.name} open={junglePickerOpen} onClick={() => {
@@ -396,6 +396,18 @@ function SafariHero({ onBack }: { onBack: () => void }) {
         }}
       />
 
+      {/* Langoor touching top-right of page */}
+      <Image
+        src="/hero/langoor.png"
+        alt=""
+        aria-hidden="true"
+        width={300}
+        height={304}
+        priority
+        className="absolute right-14 top-0 h-32 w-auto select-none drop-shadow-md langoor-sway"
+      />
+
+      {/* Nav buttons */}
       <div className="relative mx-auto flex max-w-3xl items-center justify-between px-4 sm:px-6">
         <button type="button" onClick={onBack} className={`${circle} text-[#17201c]`} aria-label="Back to home">
           <BackIcon />
@@ -405,21 +417,16 @@ function SafariHero({ onBack }: { onBack: () => void }) {
         </a>
       </div>
 
-      <div className="relative mt-3 px-6 text-center">
+      {/* Title centred in space between langoor feet and card */}
+      <div className="relative flex flex-col items-center justify-center pt-24 pb-8 px-6 text-center">
         <h1 className="font-display text-3xl font-bold text-brand-dark sm:text-4xl">Plan Your Jungle Safari</h1>
         <p className="mx-auto mt-2 max-w-md text-sm text-[#5c4a10]">One simple plan for your safaris, stay and transfers.</p>
       </div>
 
-      {/* Savannah silhouette band along the bottom of the sunburst */}
-      <Image
-        src="/hero/animals.png"
-        alt=""
-        aria-hidden="true"
-        width={1400}
-        height={411}
-        priority
-        className="relative mt-2 block h-auto w-full select-none opacity-90"
-      />
+      {/* Fade strip */}
+      <div className="relative w-full" aria-hidden="true" style={{ height: "60px" }}>
+        <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent, #ffffff)" }} />
+      </div>
     </header>
   );
 }

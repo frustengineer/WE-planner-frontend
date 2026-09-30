@@ -245,3 +245,15 @@ a {
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+/* Langoor slow sway */
+@keyframes langoor-sway {
+  0%, 100% { transform: translateX(0px); }
+  50% { transform: translateX(-12px); }
+}
+.langoor-sway {
+  animation: langoor-sway 3s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .langoor-sway { animation: none; }
+}

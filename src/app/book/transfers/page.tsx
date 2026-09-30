@@ -20,18 +20,13 @@ export default function TransfersStep() {
   const chosen = state.transferVehicle;
   const chosenVehicle = transferVehicle(chosen);
 
-  const lastTap = useRef<{ choice: TransferChoice; time: number } | null>(null);
 
-  function choose(choice: TransferChoice, event: React.MouseEvent) {
-    // A quick second tap on the same option clears it.
-    const now = event.timeStamp;
-    const previous = lastTap.current;
-    if (previous && previous.choice === choice && now - previous.time < 400) {
-      lastTap.current = null;
+  function choose(choice: TransferChoice, _event?: React.MouseEvent) {
+    // Clicking the already-selected option deselects it.
+    if (chosen === choice) {
       update({ transferVehicle: null, transfers: false });
       return;
     }
-    lastTap.current = { choice, time: now };
     update({ transferVehicle: choice, transfers: choice !== "own" });
   }
 
@@ -81,7 +76,7 @@ export default function TransfersStep() {
               selected={chosen === vehicle.id}
               recommended={recommended === vehicle.id}
               tooSmall={travellers > vehicle.maxTravellers}
-              onSelect={(event) => choose(vehicle.id, event)}
+              onSelect={() => choose(vehicle.id)}
             />
           ))}
 
@@ -122,8 +117,17 @@ export default function TransfersStep() {
               <span aria-hidden="true" className="text-sm font-extrabold leading-none text-[#FFE36D]">+</span>
               <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-white">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={chosenVehicle?.image ?? "/tiles/taxi.png"} alt="" aria-hidden="true" className="h-[48px] w-[48px] max-w-none object-contain" />
+                <img src="/tiles/resort.png" alt="Resort added" className="h-[44px] w-[44px] max-w-none object-contain" />
               </span>
+              {chosen && (
+                <>
+                  <span aria-hidden="true" className="text-sm font-extrabold leading-none text-[#FFE36D]">+</span>
+                  <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-white">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={chosenVehicle?.image ?? "/tiles/taxi.png"} alt="" aria-hidden="true" className="h-[48px] w-[48px] max-w-none object-contain" />
+                  </span>
+                </>
+              )}
             </div>
             <div className="min-w-0 flex-1">
               {chosen === "own" ? (
@@ -216,11 +220,11 @@ function VehicleCard({
           <p className="font-display text-xl font-bold leading-none text-[#17201c]">₹{vehicle.price.toLocaleString("en-IN")}</p>
           <p className="mt-1 truncate text-[10px] text-[#7b847f]">Pickup &amp; drop · complete trip</p>
         </div>
-        <span className={`flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-xs font-extrabold transition ${selected ? "bg-[#1f6b48] text-white" : "bg-[#161c19] text-white"}`}>
+        <span className={`flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-xs font-extrabold transition ${selected ? "bg-[#fdecea] text-[#b3261e]" : "bg-[#161c19] text-white"}`}>
           {selected ? (
             <>
-              <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2.8" aria-hidden="true"><path d="m4.5 10 3.4 3.4 7.6-7.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
-              Selected
+              <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2.8" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15" strokeLinecap="round" strokeLinejoin="round" /></svg>
+              Deselect
             </>
           ) : (
             "Select"

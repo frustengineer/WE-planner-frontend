@@ -8,7 +8,7 @@ export const metadata = {
 
 export default function JungleSafariGuide() {
   return (
-    <article className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-16">
+    <article className="mx-auto max-w-3xl px-4 pb-12 sm:px-6 sm:pb-16">
       <Link href="/" className="text-xs font-semibold uppercase tracking-wider text-brand hover:underline">
         ← Back to home
       </Link>

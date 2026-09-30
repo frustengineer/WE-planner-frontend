@@ -19,14 +19,15 @@ export default function ResortStep() {
   const [offerCopied, setOfferCopied] = useState(false);
   const hasSafariPlan = Boolean(state.range && state.startDate && state.plan.length > 0);
   const effectiveRange = state.range ?? "Kolara";
+  const selectedResort = RESORTS.find((resort) => resort.id === state.resortId);
 
   const resorts = useMemo(
     () => RESORTS.filter((resort) => resort.range === effectiveRange && (filter === "all" || resort.tier === filter)),
     [effectiveRange, filter]
   );
 
-  function continueToReview() {
-    router.push(hasSafariPlan ? "/book/step-4" : "/book/step-1");
+  function continueToNext() {
+    router.push(hasSafariPlan ? "/book/transfers" : "/book/step-1");
   }
 
   async function copyOfferCode() {
@@ -41,17 +42,31 @@ export default function ResortStep() {
 
   return (
     <main className="min-h-screen bg-[#f3f5f3] pb-28 sm:pb-10">
-      <div className="border-b border-[#e0e5e2] bg-white px-4 pt-1 sm:rounded-b-[28px]">
-        <StepIndicator current={3} />
+      <div className="border-b border-[#e0e5e2] bg-white px-4 pb-2 pt-2 sm:rounded-b-[28px] sm:px-7 sm:shadow-[0_10px_30px_rgba(25,50,40,0.06)]">
+        <div className="mx-auto grid max-w-4xl grid-cols-[40px_minmax(0,1fr)_72px] items-center gap-2">
+          <button type="button" onClick={() => router.push("/book/step-2")} className="flex h-10 w-9 items-center justify-start text-[#17201c] transition hover:-translate-x-0.5 hover:text-[#1f6b48]" aria-label="Back to safari permits">
+            <BackIcon />
+          </button>
+          <div className="min-w-0 text-center">
+            <p className="text-[9px] font-extrabold uppercase tracking-[0.16em] text-[#4d7863]">Step 2 of 3</p>
+            <h1 className="font-display truncate text-xl font-bold leading-tight text-[#17201c] sm:text-2xl">Choose your resort</h1>
+          </div>
+          <div className="flex items-center justify-end gap-2">
+            <button type="button" onClick={() => router.push("/book/step-1")} className="flex h-10 w-7 items-center justify-center text-[#17201c] transition hover:-translate-y-0.5 hover:text-[#2e7251]" aria-label="Edit trip basics">
+              <EditIcon />
+            </button>
+            <a href="https://wa.me/?text=Hi%2C%20I%20need%20help%20planning%20my%20safari%20with%20Wild%20Excursions." target="_blank" rel="noreferrer" className="flex h-10 w-7 items-center justify-center text-[#18a957] transition hover:-translate-y-0.5 hover:text-[#087a42]" aria-label="Chat on WhatsApp">
+              <WhatsAppIcon />
+            </a>
+          </div>
+        </div>
+        <div className="mx-auto max-w-md">
+          <StepIndicator current={2} currentTone="green" />
+        </div>
       </div>
 
       <div className="mx-auto max-w-4xl px-4 py-5 sm:px-6 sm:py-8">
-        <div className="px-1">
-          <p className="text-[9px] font-extrabold uppercase tracking-[0.16em] text-[#777777]">Step 3 of 4 · Stay</p>
-          <h1 className="font-display mt-1 text-[30px] font-bold leading-tight text-[#111111] sm:text-4xl">Choose your resort</h1>
-        </div>
-
-        <section className="resort-offer-edge relative -mx-4 mt-5 bg-[#ffe36d] px-5 pb-5 pt-4 text-[#111111] sm:mx-0 sm:rounded-[24px] sm:px-6 sm:pb-6 sm:pt-5">
+        <section className="resort-offer-edge sticky top-0 z-40 -mx-4 bg-[#ffe36d] px-5 pb-5 pt-4 text-[#111111] sm:mx-0 sm:rounded-[24px] sm:px-6 sm:pb-6 sm:pt-5">
           <div className="flex items-center justify-between gap-4">
             <div className="min-w-0">
               <p className="truncate text-xs font-semibold sm:text-sm">Long Weekend Stay Offer</p>
@@ -131,9 +146,9 @@ export default function ResortStep() {
                     <button
                       type="button"
                       onClick={() => update({ resortId: selected ? null : resort.id })}
-                      className={`rounded-xl px-5 py-2.5 text-xs font-extrabold transition ${selected ? "bg-[#e8f5ed] text-[#17633b]" : "bg-[#182b22] text-white hover:bg-[#25523d]"}`}
+                      className={`rounded-xl px-5 py-2.5 text-xs font-extrabold transition ${selected ? "bg-[#fdecea] text-[#b3261e] hover:bg-[#fbd9d5]" : "bg-[#182b22] text-white hover:bg-[#25523d]"}`}
                     >
-                      {selected ? "Selected ✓" : "Select stay"}
+                      {selected ? "Deselect" : "Select stay"}
                     </button>
                   </div>
                 </div>
@@ -147,16 +162,52 @@ export default function ResortStep() {
         <div className="mt-7 hidden items-center justify-between rounded-2xl bg-white p-4 shadow-sm sm:flex">
           <button type="button" onClick={() => router.push(hasSafariPlan ? "/book/step-2" : "/")} className="rounded-xl px-5 py-3 text-sm font-bold text-[#425249]">Back</button>
           <div className="flex items-center gap-3">
-            {hasSafariPlan && <button type="button" onClick={() => { update({ resortId: null }); continueToReview(); }} className="px-4 py-3 text-xs font-bold text-[#68756e]">Skip stay</button>}
-            <button type="button" onClick={continueToReview} className="rounded-xl bg-[#fdcb08] px-7 py-3 text-sm font-extrabold text-[#17201c] shadow-[0_8px_20px_rgba(253,203,8,0.25)]">{hasSafariPlan ? "Continue to review →" : "Plan your safari →"}</button>
+            {hasSafariPlan && <button type="button" onClick={() => { update({ resortId: null }); continueToNext(); }} className="px-4 py-3 text-xs font-bold text-[#68756e]">Skip stay</button>}
+            <button type="button" onClick={continueToNext} className="rounded-xl bg-[#fdcb08] px-7 py-3 text-sm font-extrabold text-[#17201c] shadow-[0_8px_20px_rgba(253,203,8,0.25)]">{hasSafariPlan ? "Continue to transfers →" : "Plan your safari →"}</button>
           </div>
         </div>
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-50 border-t border-[#dfe5e1] bg-white/95 px-4 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 shadow-[0_-8px_28px_rgba(24,33,29,0.12)] backdrop-blur-xl sm:hidden">
-        <div className="mx-auto flex max-w-xl items-center gap-3">
-          {hasSafariPlan && <button type="button" onClick={() => { update({ resortId: null }); continueToReview(); }} className="px-2 py-3 text-xs font-bold text-[#68756e]">Skip</button>}
-          <button type="button" onClick={continueToReview} className="flex-1 rounded-xl bg-[#fdcb08] px-5 py-3.5 text-sm font-extrabold text-[#17201c] shadow-[0_8px_20px_rgba(253,203,8,0.25)]">{hasSafariPlan ? "Continue to review →" : "Plan your safari →"}</button>
+      <div className="fixed inset-x-3 bottom-3 z-50 sm:hidden" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
+        <div className="flex items-stretch gap-2">
+          <div className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl bg-[#161c19] px-3.5 py-3 shadow-[0_14px_32px_rgba(0,0,0,0.3)]">
+            <div className="flex shrink-0 items-center gap-1">
+              {hasSafariPlan && (
+                <>
+                  <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-white">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="/tiles/gypsy.png" alt="Safari added" className="h-[44px] w-[44px] max-w-none object-contain" />
+                  </span>
+                  <span aria-hidden="true" className="text-sm font-extrabold leading-none text-[#FFE36D]">+</span>
+                </>
+              )}
+              <span className={`flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-white ${selectedResort ? "" : "opacity-90"}`}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/tiles/resort.png" alt="" aria-hidden="true" className="h-[50px] w-[50px] max-w-none object-contain" />
+              </span>
+            </div>
+            {selectedResort ? (
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-bold text-white">{selectedResort.name} added · ₹{(selectedResort.pricePerNight * state.nights).toLocaleString("en-IN")}</p>
+                <p className="truncate text-xs text-white/70">{state.nights} night{state.nights === 1 ? "" : "s"} · Near {selectedResort.range} gate</p>
+              </div>
+            ) : (
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-bold text-white">Choose your resort</p>
+                <p className="truncate text-xs text-white/70">Pick a stay as per your convenience</p>
+              </div>
+            )}
+          </div>
+          {selectedResort && (
+            <button
+              type="button"
+              onClick={continueToNext}
+              className="group flex shrink-0 items-center justify-center gap-1.5 rounded-2xl bg-[#FDCB08] px-5 py-2.5 text-[15px] font-extrabold text-[#1c1608] shadow-[inset_0_1px_0_rgba(255,255,255,0.6),0_14px_32px_rgba(0,0,0,0.28)] transition active:scale-95"
+            >
+              Continue
+              <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4 transition-transform group-hover:translate-x-0.5" fill="none" stroke="currentColor" strokeWidth="2.6"><path d="M5 12h14m-6-6 6 6-6 6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            </button>
+          )}
         </div>
       </div>
     </main>
@@ -181,4 +232,13 @@ function CopyIcon() {
 
 function OfferCheckIcon() {
   return <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="m5 12 4 4L19 6" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+}
+function BackIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2.8"><path d="M20 12H4m7-7-7 7 7 7" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+}
+function EditIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24" className="h-[22px] w-[22px]" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25Zm17.71-10.04a.996.996 0 0 0 0-1.41l-2.51-2.51a.996.996 0 0 0-1.41 0l-1.96 1.96 3.75 3.75 2.13-1.79Z" /></svg>;
+}
+function WhatsAppIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24" className="h-[25px] w-[25px]" fill="currentColor"><path d="M12.04 2a9.84 9.84 0 0 0-8.42 14.94L2.05 22l5.19-1.36A9.84 9.84 0 1 0 12.04 2Zm0 17.97a8.15 8.15 0 0 1-4.15-1.14l-.3-.18-3.08.81.82-3-.2-.31a8.12 8.12 0 1 1 6.91 3.82Zm4.46-6.1c-.24-.12-1.44-.71-1.66-.79-.22-.08-.38-.12-.54.12-.16.24-.63.79-.77.95-.14.16-.28.18-.52.06-.24-.12-1.03-.38-1.96-1.21-.72-.65-1.21-1.44-1.35-1.69-.14-.24-.01-.37.11-.49.11-.11.24-.28.36-.42.12-.14.16-.24.24-.4.08-.16.04-.3-.02-.42-.06-.12-.54-1.3-.74-1.78-.2-.47-.4-.4-.54-.41h-.46c-.16 0-.42.06-.64.3-.22.24-.84.82-.84 2s.86 2.32.98 2.48c.12.16 1.69 2.58 4.1 3.62.57.25 1.02.4 1.37.51.58.18 1.1.15 1.52.09.46-.07 1.44-.59 1.64-1.16.2-.57.2-1.06.14-1.16-.06-.1-.22-.16-.46-.28Z" /></svg>;
 }

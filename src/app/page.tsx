@@ -403,14 +403,28 @@ function MobileHome({ parks }: { parks: MobilePark[] }) {
               <SpotlightCard key={park.slug} park={park} />
             ))}
           </div>
-        </section>
-
-        <section className="mt-5 border-y border-[#ececec] bg-white px-3 py-5">
-          <div className="grid grid-cols-3">
-            <MobileTrust icon="shield" label="Sample Safari Slots" />
-            <MobileTrust icon="clock" label="Example Prices" />
-            <MobileTrust icon="chat" label="Browser Demo" />
-          </div>
+          <Link href="/book/step-1" className="mx-auto mt-1 flex w-fit items-center gap-3 rounded-2xl py-2 transition active:scale-[.98]">
+            <span className="relative h-14 w-[92px] shrink-0">
+              {parks.slice(0, 3).map((park, i) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  key={park.slug}
+                  src={park.image}
+                  alt=""
+                  aria-hidden="true"
+                  className="absolute top-1 h-12 w-12 rounded-xl border-2 border-white object-cover shadow-md"
+                  style={{ left: i * 21, zIndex: i, transform: `rotate(${[-8, 4, -3][i]}deg)` }}
+                />
+              ))}
+            </span>
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-[#1f2233] text-[#1f2233]">
+              <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6" aria-hidden="true"><path d="M12 5v14M6 13l6 6 6-6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            </span>
+            <span className="leading-tight">
+              <span className="block text-lg font-semibold text-black">More</span>
+              <span className="block text-base text-[#a8a8b3]">Destination</span>
+            </span>
+          </Link>
         </section>
       </div>
     </div>
@@ -606,7 +620,7 @@ function WideCard({
       className="relative flex flex-col justify-between overflow-hidden rounded-[18px] border border-[#ececec] bg-[#f7f7f7] p-4 transition active:scale-[.98]"
     >
       {badge && (
-        <span className="absolute right-3 top-3 rounded-full bg-black px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-accent">
+        <span className="absolute right-3 top-3 rounded-full bg-[#dff3e6] px-2 py-0.5 text-[9px] font-bold text-success">
           {badge}
         </span>
       )}
@@ -647,17 +661,6 @@ function QuickLink({ label, icon, href, badge, from, to, color }: QuickLinkItem)
         </span>
       )}
     </Link>
-  );
-}
-
-function MobileTrust({ icon, label }: { icon: "shield" | "clock" | "chat"; label: string }) {
-  return (
-    <div className="flex flex-col items-center justify-start px-2 py-1 text-center text-black">
-      {icon === "shield" && <svg viewBox="0 0 24 24" fill="none" className="h-7 w-7"><path d="M12 3 5.5 5.6v5.7c0 4.2 2.5 7.7 6.5 9.7 4-2 6.5-5.5 6.5-9.7V5.6L12 3Z" stroke="currentColor" strokeWidth="1.8" /><path d="m9.4 11.8 1.7 1.7 3.7-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>}
-      {icon === "clock" && <svg viewBox="0 0 24 24" fill="none" className="h-7 w-7"><circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="1.8" /><path d="M12 7.5V12l3 2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>}
-      {icon === "chat" && <svg viewBox="0 0 24 24" fill="none" className="h-7 w-7"><path d="M5 5.5h14v10H9l-4 3v-13Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" /></svg>}
-      <span className="mt-2 max-w-[82px] text-[11px] font-medium leading-[1.4] text-[#555555]">{label}</span>
-    </div>
   );
 }
 

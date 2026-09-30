@@ -80,7 +80,7 @@ export function AskExpertWidget() {
     <>
       {/* Floating launcher */}
       {!isBookingFlow && (
-      <div className="fixed bottom-24 right-4 z-50 flex flex-col items-end gap-2 sm:bottom-6">
+      <div className="fixed bottom-5 right-4 z-50 flex flex-col items-end gap-2 sm:bottom-6">
         <Link
           href="/book/step-1"
           className="hidden items-center gap-1.5 rounded-full border border-accent bg-white px-3.5 py-2 text-xs font-semibold text-brand-dark shadow-[0_6px_18px_rgba(17,17,17,0.1)] transition hover:bg-accent-light sm:flex"
@@ -111,11 +111,12 @@ export function AskExpertWidget() {
             )}
           </span>
           <span
-            className={`whitespace-nowrap text-sm font-semibold leading-none text-brand-dark transition-opacity duration-300 ${
+            className={`whitespace-nowrap text-sm font-semibold leading-none text-brand-dark text-left transition-opacity duration-300 ${
               showGreeting && !open && !isBookingFlow ? "opacity-100 delay-200" : "pointer-events-none w-0 opacity-0"
             }`}
           >
             New to jungle safari?
+            <span className="mt-1 block text-[11px] font-medium text-muted">Ask Maya anything</span>
           </span>
         </button>
       </div>
@@ -179,6 +180,29 @@ export function AskExpertWidget() {
                   {t.question}
                 </button>
               ))}
+            </div>
+
+            <div className="mt-5 rounded-2xl border border-[#cfeedd] bg-[#f1fbf5] p-3.5">
+              <p className="text-sm font-bold text-brand-dark">Need human support?</p>
+              <p className="mt-0.5 text-xs leading-5 text-muted">Contact our Wild Excursions team — we&apos;re happy to help plan your safari.</p>
+              <div className="mt-3 flex gap-2">
+                <a
+                  href="https://wa.me/?text=Hi%2C%20I%20need%20help%20planning%20my%20safari%20with%20Wild%20Excursions."
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#25D366] px-3 py-2.5 text-xs font-bold text-white transition hover:bg-[#1fb857] active:scale-95"
+                >
+                  <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor"><path d="M12.04 2a9.84 9.84 0 0 0-8.42 14.94L2.05 22l5.19-1.36A9.84 9.84 0 1 0 12.04 2Zm0 17.97a8.15 8.15 0 0 1-4.15-1.14l-.3-.18-3.08.81.82-3-.2-.31a8.12 8.12 0 1 1 6.91 3.82Zm4.46-6.1c-.24-.12-1.44-.71-1.66-.79-.22-.08-.38-.12-.54.12-.16.24-.63.79-.77.95-.14.16-.28.18-.52.06-.24-.12-1.03-.38-1.96-1.21-.72-.65-1.21-1.44-1.35-1.69-.14-.24-.01-.37.11-.49.11-.11.24-.28.36-.42.12-.14.16-.24.24-.4.08-.16.04-.3-.02-.42-.06-.12-.54-1.3-.74-1.78-.2-.47-.4-.4-.54-.41h-.46c-.16 0-.42.06-.64.3-.22.24-.84.82-.84 2s.86 2.32.98 2.48c.12.16 1.69 2.58 4.1 3.62.57.25 1.02.4 1.37.51.58.18 1.1.15 1.52.09.46-.07 1.44-.59 1.64-1.16.2-.57.2-1.06.14-1.16-.06-.1-.22-.16-.46-.28Z" /></svg>
+                  WhatsApp us
+                </a>
+                <Link
+                  href="/book/step-1"
+                  onClick={() => setOpen(false)}
+                  className="flex flex-1 items-center justify-center rounded-xl border border-[#bfe3cf] bg-white px-3 py-2.5 text-xs font-bold text-brand-dark transition active:scale-95"
+                >
+                  Contact team
+                </Link>
+              </div>
             </div>
 
             <Link

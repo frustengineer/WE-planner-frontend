@@ -1,6 +1,8 @@
 import { PRICING, RESORTS } from "./mockData";
 import type { BookingState } from "./types";
 import { calculatePartyOccupancy } from "./occupancy";
+import { transferVehicle } from "./transfers";
+import { fareOffer, findCoupon, offerBlocker } from "./offers";
 
 export type CartLine = { label: string; amount: number; detail?: string };
 
@@ -35,10 +37,34 @@ export function computeCart(state: BookingState): {
     });
   }
 
-  if (state.transfers) {
+  const vehicle = transferVehicle(state.transferVehicle);
+  if (vehicle) {
+    lines.push({ label: "Pickup & drop transfers", amount: vehicle.price, detail: vehicle.name });
+  } else if (state.transfers) {
     lines.push({ label: "Transfers", amount: PRICING.transferFlat });
   }
 
-  const total = lines.reduce((sum, l) => sum + l.amount, 0);
-  return { lines, total };
+  const subtotal = lines.reduce((sum, l) => sum + l.amount, 0);
+  const travellers = state.numAdults + state.childAges.length;
+  let remaining = subtotal;
+
+  const fare = fareOffer(state.specialFares[0]);
+  if (fare && fare.amount > 0 && !offerBlocker(fare, state, travellers)) {
+    const off = Math.min(fare.amount, remaining);
+    if (off > 0) {
+      lines.push({ label: `${fare.title} fare`, amount: -off, detail: fare.headline });
+      remaining -= off;
+    }
+  }
+
+  const coupon = state.couponCode ? findCoupon(state.couponCode) : undefined;
+  if (coupon && !offerBlocker(coupon, state, travellers)) {
+    const off = Math.min(coupon.amount, remaining);
+    if (off > 0) {
+      lines.push({ label: `Coupon ${coupon.code}`, amount: -off, detail: coupon.title });
+      remaining -= off;
+    }
+  }
+
+  return { lines, total: remaining };
 }

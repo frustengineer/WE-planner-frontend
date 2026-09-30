@@ -13,11 +13,12 @@ const NAV_LINKS = [
 
 export function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
+
   const pathname = usePathname();
-
-  if (pathname.startsWith("/book/step-2") || pathname.startsWith("/book/step-3") || pathname.startsWith("/book/step-4")) return null;
-
-  const isHome = pathname === "/";
+  // The home-page (dark, frosted) header is used on every page.
+  const isHome = true;
+  // Booking steps 1-4 have their own headers and pinned bars, so no site nav there.
+  if (/^\/book\/(step-[1234]|transfers)/.test(pathname)) return null;
 
   return (
     <div className="sticky top-3 z-40 mx-3 sm:mx-6">
@@ -72,7 +73,7 @@ export function Header() {
       </nav>
 
       {menuOpen && (
-        <div className="mt-2 grid gap-1 rounded-[1.5rem] bg-[#080808] p-3 shadow-[0_22px_55px_rgba(0,0,0,0.55)] lg:hidden">
+        <div className={`wild-navbar-glass mt-2 grid gap-1 rounded-[1.5rem] p-3 lg:hidden ${isHome ? "wild-navbar-glass--solid" : ""}`}>
           {NAV_LINKS.map((link) => (
             <Link
               key={link.href}

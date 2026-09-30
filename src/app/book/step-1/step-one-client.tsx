@@ -3,9 +3,8 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { StepIndicator } from "@/components/StepIndicator";
 import { useBooking } from "@/lib/booking-context";
-import { RANKING, ZONES, toLocalISODate } from "@/lib/mockData";
+import { toLocalISODate } from "@/lib/mockData";
 import { calculatePartyOccupancy } from "@/lib/occupancy";
 import type { Jungle } from "@/lib/types";
 
@@ -18,8 +17,14 @@ export function StepOneClient({ jungles }: { jungles: Jungle[] }) {
   const availableJungles = jungles.filter((item) => !item.comingSoon);
   const jungle = availableJungles.find((item) => item.slug === state.jungleSlug) ?? availableJungles[0];
   const [error, setError] = useState<string | null>(null);
+
+  // The range picker is gone: fall back to the jungle's first range so later steps always have one.
+  useEffect(() => {
+    if (jungle && jungle.ranges[0] && (!state.range || !jungle.ranges.includes(state.range))) {
+      update({ jungleSlug: jungle.slug, range: jungle.ranges[0] ?? null });
+    }
+  }, [jungle, state.range, update]);
   const [junglePickerOpen, setJunglePickerOpen] = useState(false);
-  const [rangePickerOpen, setRangePickerOpen] = useState(false);
   const [lengthPickerOpen, setLengthPickerOpen] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState(() => {
@@ -47,22 +52,19 @@ export function StepOneClient({ jungles }: { jungles: Jungle[] }) {
     if (requestedJungle && requestedJungle.slug !== state.jungleSlug) {
       update({
         jungleSlug: requestedJungle.slug,
-        range: requestedJungle.ranges.length === 1 ? requestedJungle.ranges[0] : null,
+        range: requestedJungle.ranges[0] ?? null,
         recommendedStartDate: null,
         plan: [],
         resortId: null,
       });
     }
     const editorTarget =
-      requestedEditor === "range"
-        ? "trip-range-control"
-        : requestedEditor === "date"
+      requestedEditor === "date"
           ? "trip-date-control"
           : requestedEditor === "travellers"
             ? "trip-travellers-control"
             : null;
     /* eslint-disable react-hooks/set-state-in-effect -- URL-driven edit links intentionally open the requested Step 1 control after mount */
-    if (requestedEditor === "range") setRangePickerOpen(true);
     if (requestedEditor === "date") setCalendarOpen(true);
     if (requestedEditor === "travellers") setTravellerPickerOpen(true);
     /* eslint-enable react-hooks/set-state-in-effect */
@@ -82,12 +84,9 @@ export function StepOneClient({ jungles }: { jungles: Jungle[] }) {
     );
   }
 
-  const isCurated = (range: string) =>
-    ZONES.some((zone) => zone.range === range && RANKING.some((ranking) => ranking.zoneId === zone.id));
 
-  function closePickers(except?: "jungle" | "range" | "length" | "travellers") {
+  function closePickers(except?: "jungle" | "length" | "travellers") {
     if (except !== "jungle") setJunglePickerOpen(false);
-    if (except !== "range") setRangePickerOpen(false);
     if (except !== "length") setLengthPickerOpen(false);
     if (except !== "travellers") setTravellerPickerOpen(false);
     setCalendarOpen(false);
@@ -95,11 +94,6 @@ export function StepOneClient({ jungles }: { jungles: Jungle[] }) {
 
   function handleContinue(event: React.FormEvent) {
     event.preventDefault();
-    if (!state.range) {
-      setError("Pick a range to continue.");
-      setRangePickerOpen(true);
-      return;
-    }
     if (!state.startDate) {
       setError("Pick your travel date.");
       return;
@@ -141,31 +135,32 @@ export function StepOneClient({ jungles }: { jungles: Jungle[] }) {
 
   function toggleSpecialFare(fare: BookingSpecialFare) {
     update({
-      specialFares: state.specialFares.includes(fare)
-        ? state.specialFares.filter((item) => item !== fare)
-        : [...state.specialFares, fare],
+      // Only one special fare can apply at a time; tapping the selected one clears it.
+      specialFares: state.specialFares.includes(fare) ? [] : [fare],
+      couponCode: null,
     });
   }
 
   return (
-    <div className="relative -mt-20 min-h-screen overflow-hidden bg-[linear-gradient(180deg,#c9f1ff_0%,#e6f8ed_34%,#ffffff_70%)] pb-12 pt-20 sm:-mt-24 sm:pt-24">
-      <div className="pointer-events-none absolute -left-16 top-20 h-56 w-56 rounded-full bg-white/45 blur-3xl" aria-hidden="true" />
-      <div className="pointer-events-none absolute -right-20 top-32 h-64 w-64 rounded-full bg-[#7ed7ff]/30 blur-3xl" aria-hidden="true" />
+    <div className="relative min-h-screen overflow-hidden bg-[linear-gradient(180deg,#FFE36D_0%,#fff3bd_34%,#ffffff_70%)] pb-12">
+      <div className="pointer-events-none absolute -left-16 top-20 h-56 w-56 rounded-full bg-white/55 blur-3xl" aria-hidden="true" />
+      <div className="pointer-events-none absolute -right-20 top-32 h-64 w-64 rounded-full bg-[#FFE36D]/40 blur-3xl" aria-hidden="true" />
       <div className="relative">
-        <StepIndicator current={1} />
-        <div className="mx-auto mb-6 px-5 text-center sm:mb-8">
-          <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#236d61]">Wild Excursions</p>
-          <h1 className="font-display mt-2 text-3xl font-bold text-brand-dark sm:text-4xl">Plan Your Jungle Safari</h1>
-          <p className="mx-auto mt-2 max-w-lg text-sm text-[#53686d]">One simple plan for your safaris, stay and transfers.</p>
+        <div className="mx-auto flex max-w-3xl items-center justify-between px-4 pt-3 sm:px-6">
+          <button type="button" onClick={() => router.push("/")} className="flex h-10 w-9 items-center justify-start text-[#17201c] transition hover:-translate-x-0.5 hover:text-[#1f6b48]" aria-label="Back to home">
+            <BackIcon />
+          </button>
+          <a href="https://wa.me/?text=Hi%2C%20I%20need%20help%20planning%20my%20safari%20with%20Wild%20Excursions." target="_blank" rel="noreferrer" className="flex h-10 w-9 items-center justify-end text-[#18a957] transition hover:-translate-y-0.5 hover:text-[#087a42]" aria-label="Chat on WhatsApp">
+            <WhatsAppIcon />
+          </a>
+        </div>
+        <div className="mx-auto mb-6 px-5 pt-1 text-center sm:mb-8">
+          <h1 className="font-display text-3xl font-bold text-brand-dark sm:text-4xl">Plan Your Jungle Safari</h1>
+          <p className="mx-auto mt-2 max-w-lg text-sm text-[#5c4a10]">One simple plan for your safaris, stay and transfers.</p>
         </div>
 
-      <form onSubmit={handleContinue} className="mx-3 overflow-hidden rounded-[30px] border border-white/80 bg-white/90 shadow-[0_24px_55px_rgba(27,72,78,0.18)] backdrop-blur-xl sm:mx-auto sm:max-w-3xl">
-        <div className="border-b border-[#dce6e5] p-4 sm:p-5">
-          <div className="grid grid-cols-2 rounded-full bg-[#f0f3f4] p-1">
-            <button type="button" onClick={() => update({ transfers: true })} className={`rounded-full px-3 py-3 text-[11px] font-semibold transition sm:text-[13px] ${state.transfers ? "bg-[#18212f] text-white shadow-[0_6px_16px_rgba(24,33,47,0.22)]" : "text-muted"}`}>With Transfers</button>
-            <button type="button" onClick={() => update({ transfers: false })} className={`rounded-full px-3 py-3 text-[11px] font-semibold transition sm:text-[13px] ${!state.transfers ? "bg-[#18212f] text-white shadow-[0_6px_16px_rgba(24,33,47,0.22)]" : "text-muted"}`}>Without Transfers</button>
-          </div>
-        </div>
+      <form onSubmit={handleContinue} className="mx-3 overflow-hidden rounded-[30px] border border-white/80 bg-white/90 shadow-[0_24px_55px_rgba(120,90,0,0.22)] backdrop-blur-xl sm:mx-auto sm:max-w-3xl">
+        <OfferBanner />
 
         <div className="space-y-3 bg-white/55 p-4 pb-5 sm:p-6">
           <SelectionButton icon="jungle" label="Which jungle" value={jungle.name} open={junglePickerOpen} onClick={() => {
@@ -219,7 +214,7 @@ export function StepOneClient({ jungles }: { jungles: Jungle[] }) {
                       }
                       return (
                         <button type="button" key={item.slug} onClick={() => {
-                          update({ jungleSlug: item.slug, range: item.ranges.length === 1 ? item.ranges[0] : null, recommendedStartDate: null, plan: [], resortId: null });
+                          update({ jungleSlug: item.slug, range: item.ranges[0] ?? null, recommendedStartDate: null, plan: [], resortId: null });
                           setJunglePickerOpen(false);
                         }} className={`grid min-h-[70px] w-full grid-cols-[52px_minmax(0,1fr)_32px] items-center gap-3 overflow-hidden rounded-xl border p-2 text-left transition ${selected ? "border-accent bg-[linear-gradient(100deg,#fff9e4,#fff3bc)] shadow-[0_5px_14px_rgba(253,203,8,0.14)]" : "border-border bg-white hover:border-accent hover:bg-[#fffdf5]"}`}>
                           <Image
@@ -247,25 +242,6 @@ export function StepOneClient({ jungles }: { jungles: Jungle[] }) {
             </div>
           )}
 
-          <SelectionButton id="trip-range-control" icon="range" label="Which range" value={state.range ?? "Choose a range"} placeholder={!state.range} open={rangePickerOpen} onClick={() => {
-            const next = !rangePickerOpen;
-            closePickers("range");
-            setRangePickerOpen(next);
-          }} />
-
-          {rangePickerOpen && (
-            <div className="grid grid-cols-2 gap-2 rounded-xl border border-border bg-white p-3 shadow-sm sm:grid-cols-4">
-              {jungle.ranges.map((range) => (
-                <button type="button" key={range} onClick={() => {
-                  update({ jungleSlug: jungle.slug, range, recommendedStartDate: null, plan: [] });
-                  setRangePickerOpen(false);
-                }} title={isCurated(range) ? undefined : "Ranked by current demand — not yet reviewed by our team"} className={`rounded-lg border px-3 py-3 text-sm font-semibold transition ${state.range === range ? "border-brand bg-brand text-white" : "border-border bg-white hover:border-brand"}`}>
-                  {range}
-                </button>
-              ))}
-            </div>
-          )}
-
           <div className="grid grid-cols-2 gap-3">
             <button
               id="trip-date-control"
@@ -280,7 +256,7 @@ export function StepOneClient({ jungles }: { jungles: Jungle[] }) {
                 }
                 setCalendarOpen(next);
               }}
-              className={`group relative flex min-h-[88px] w-full items-center gap-2 rounded-2xl border bg-white px-2.5 py-3 text-left shadow-[0_2px_8px_rgba(17,17,17,0.03)] transition hover:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 sm:gap-3 sm:px-4 ${calendarOpen ? "border-accent ring-2 ring-accent/10" : "border-[#dedbd2]"}`}
+              className={`group relative flex min-h-[88px] w-full items-center gap-2 rounded-2xl border bg-white px-2.5 py-3 text-left shadow-[0_2px_8px_rgba(17,17,17,0.03)] transition hover:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 sm:gap-3 sm:px-4 ${calendarOpen ? "border-accent ring-2 ring-accent/10" : "border-[#eadfae]"}`}
             >
               <FieldIcon type="date" />
               <span className="min-w-0 flex-1">
@@ -365,8 +341,8 @@ export function StepOneClient({ jungles }: { jungles: Jungle[] }) {
                 Special fares
               </p>
               <div className="flex items-center gap-1">
-                <button type="button" aria-label="Previous special fares" onClick={() => specialFaresSliderRef.current?.scrollBy({ left: -190, behavior: "smooth" })} className="flex h-7 w-7 items-center justify-center rounded-full border border-border bg-white text-sm text-brand-dark">‹</button>
-                <button type="button" aria-label="Next special fares" onClick={() => specialFaresSliderRef.current?.scrollBy({ left: 190, behavior: "smooth" })} className="flex h-7 w-7 items-center justify-center rounded-full border border-border bg-white text-sm text-brand-dark">›</button>
+                <button type="button" aria-label="Previous special fares" onClick={() => specialFaresSliderRef.current?.scrollBy({ left: -190, behavior: "smooth" })} className="flex h-7 w-7 items-center justify-center rounded-full border border-[#eadfae] bg-white text-sm text-brand-dark">‹</button>
+                <button type="button" aria-label="Next special fares" onClick={() => specialFaresSliderRef.current?.scrollBy({ left: 190, behavior: "smooth" })} className="flex h-7 w-7 items-center justify-center rounded-full border border-[#eadfae] bg-white text-sm text-brand-dark">›</button>
               </div>
             </div>
             <div ref={specialFaresSliderRef} className="-mx-1 flex snap-x snap-mandatory gap-2 overflow-x-auto px-1 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -380,7 +356,7 @@ export function StepOneClient({ jungles }: { jungles: Jungle[] }) {
 
           {error && <p role="alert" className="rounded-lg border border-danger/20 bg-red-50 px-3 py-2 text-sm text-danger">{error}</p>}
 
-          <button type="submit" className="group flex w-full items-center justify-center gap-2 rounded-2xl bg-accent py-4 text-sm font-bold text-black shadow-[0_12px_26px_rgba(202,156,0,0.28)] transition hover:-translate-y-0.5 hover:bg-[#e7b900] hover:shadow-[0_15px_30px_rgba(202,156,0,0.34)] focus:ring-2 focus:ring-accent focus:ring-offset-2 active:translate-y-0 sm:text-[15px]">
+          <button type="submit" className="group flex w-full items-center justify-center gap-2 rounded-2xl bg-[linear-gradient(180deg,#FFE36D,#fdcb08)] py-4 text-sm font-bold text-black shadow-[0_12px_26px_rgba(202,156,0,0.32)] transition hover:-translate-y-0.5 hover:bg-[#e7b900] hover:shadow-[0_15px_30px_rgba(202,156,0,0.34)] focus:ring-2 focus:ring-accent focus:ring-offset-2 active:translate-y-0 sm:text-[15px]">
             Find safaris
             <span className="transition-transform group-hover:translate-x-1" aria-hidden="true">→</span>
           </button>
@@ -415,6 +391,57 @@ export function StepOneClient({ jungles }: { jungles: Jungle[] }) {
   );
 }
 
+
+function OfferBanner() {
+  const code = "LONGWEEKEND";
+  const [copied, setCopied] = useState(false);
+
+  async function copyCode() {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch {
+      /* clipboard unavailable — the code stays visible to copy by hand */
+    }
+  }
+
+  return (
+    <div className="bg-white/55 pb-3">
+      <div className="relative bg-[#FFE36D] px-4 pb-4 pt-4 sm:px-6">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[12px] font-medium text-[#3a2f08]">Long Weekend Stay Offer</p>
+            <p className="font-display mt-0.5 text-[22px] font-bold leading-tight text-black">Flat ₹350 Off</p>
+            <p className="mt-0.5 text-[10px] font-medium text-[#6b5200]">On your Kolara resort stay</p>
+          </div>
+          <button
+            type="button"
+            onClick={copyCode}
+            aria-label={`Copy code ${code}`}
+            className="flex shrink-0 items-center gap-3 rounded-[18px] border-2 border-dashed border-[#1c1608] bg-white/40 px-4 py-3 text-[12px] font-extrabold tracking-wide text-[#1c1608] transition active:scale-95"
+          >
+            {copied ? "COPIED!" : code}
+            <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden="true">
+              <rect x="8.5" y="8.5" width="11" height="11" rx="2" stroke="currentColor" strokeWidth="2" />
+              <path d="M15.5 8.5V6.5a2 2 0 0 0-2-2h-7a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          </button>
+        </div>
+        {/* scalloped bottom edge */}
+        <div
+          aria-hidden="true"
+          className="absolute inset-x-0 top-full h-[10px]"
+          style={{
+            backgroundImage: "radial-gradient(circle at 10px 0, #FFE36D 9.5px, transparent 10px)",
+            backgroundSize: "20px 10px",
+            backgroundRepeat: "repeat-x",
+          }}
+        />
+      </div>
+    </div>
+  );
+}
 
 function TravelShortcut({ type, label }: {
   type: "payment" | "card" | "emi" | "upi" | "expert" | "verified" | "transfer" | "group";
@@ -561,10 +588,10 @@ function SpecialFareCard({ title, subtitle, badge, selected, onClick }: {
       type="button"
       aria-pressed={selected}
       onClick={onClick}
-      className={`relative min-h-[62px] w-[178px] shrink-0 snap-start rounded-xl border px-3 py-2.5 text-left transition ${selected ? "border-accent bg-[#fff9df] shadow-[0_4px_12px_rgba(253,203,8,0.12)]" : "border-[#d7d7d7] bg-white hover:border-brand"}`}
+      className={`relative min-h-[62px] w-[178px] shrink-0 snap-start rounded-xl border px-3 py-2.5 text-left transition ${selected ? "border-accent bg-[#fff9df] shadow-[0_4px_12px_rgba(253,203,8,0.12)]" : "border-[#eadfae] bg-white hover:border-accent"}`}
     >
       <span className="block whitespace-nowrap text-[12px] font-semibold leading-tight text-brand-dark">{title}</span>
-      <span className={`mt-1 block whitespace-nowrap text-[10px] leading-tight ${title === "Have a GST number?" ? "text-[#3268b2]" : "text-[#008c91]"}`}>{subtitle}</span>
+      <span className={`mt-1 block whitespace-nowrap text-[10px] leading-tight ${title === "Have a GST number?" ? "text-[#8a5a00]" : "text-[#8a5a00]"}`}>{subtitle}</span>
       {badge && (
         <span className="absolute right-2 top-2 rounded-full bg-[#e65397] px-1.5 py-0.5 text-[8px] font-bold lowercase text-white">{badge}</span>
       )}
@@ -584,7 +611,7 @@ function SelectionButton({ id, icon, label, value, open, onClick, compact = fals
   placeholder?: boolean;
 }) {
   return (
-    <button id={id} type="button" onClick={onClick} aria-expanded={open} className={`flex w-full items-center rounded-2xl border bg-white py-3 text-left shadow-[0_2px_8px_rgba(17,17,17,0.03)] transition hover:border-accent focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 sm:gap-3 sm:px-4 ${compact ? "min-h-[88px] gap-2 px-2.5" : "min-h-[74px] gap-3 px-3.5"} ${open ? "border-accent ring-2 ring-accent/10" : "border-[#dedbd2]"}`}>
+    <button id={id} type="button" onClick={onClick} aria-expanded={open} className={`flex w-full items-center rounded-2xl border bg-white py-3 text-left shadow-[0_2px_8px_rgba(17,17,17,0.03)] transition hover:border-accent focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 sm:gap-3 sm:px-4 ${compact ? "min-h-[88px] gap-2 px-2.5" : "min-h-[74px] gap-3 px-3.5"} ${open ? "border-accent ring-2 ring-accent/10" : "border-[#eadfae]"}`}>
       <FieldIcon type={icon} active={open} />
       <span className="min-w-0 flex-1">
         <span className="block whitespace-nowrap text-[9px] font-semibold uppercase tracking-[0.02em] text-muted sm:text-[10px]">{label}</span>
@@ -606,7 +633,7 @@ function FieldIcon({ type, active = false }: { type: "jungle" | "range" | "date"
     travellers: <><circle cx="9" cy="8" r="3.5" /><path d="M3 20a6 6 0 0 1 12 0M17 9a3 3 0 0 1 0 6M17.5 16.5A5 5 0 0 1 21 20" /></>,
   };
   return (
-    <span className={`flex h-10 w-7 shrink-0 items-center justify-center bg-transparent transition-colors ${active ? "text-[#236d61]" : "text-brand-dark"}`}>
+    <span className={`flex h-10 w-7 shrink-0 items-center justify-center bg-transparent transition-colors ${active ? "text-[#8a6a00]" : "text-brand-dark"}`}>
       <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="h-[27px] w-[27px] stroke-current" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">{paths[type]}</svg>
     </span>
   );
@@ -645,4 +672,11 @@ function Stepper({ value, min, max, onChange }: { value: number; min: number; ma
       <button type="button" aria-label="Increase" disabled={value >= max} onClick={() => onChange(Math.min(max, value + 1))} className="flex h-8 w-8 items-center justify-center rounded-full border border-border bg-white text-lg font-semibold transition hover:border-brand disabled:cursor-not-allowed disabled:opacity-35">+</button>
     </div>
   );
+}
+
+function BackIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2.8"><path d="M20 12H4m7-7-7 7 7 7" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+}
+function WhatsAppIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24" className="h-[25px] w-[25px]" fill="currentColor"><path d="M12.04 2a9.84 9.84 0 0 0-8.42 14.94L2.05 22l5.19-1.36A9.84 9.84 0 1 0 12.04 2Zm0 17.97a8.15 8.15 0 0 1-4.15-1.14l-.3-.18-3.08.81.82-3-.2-.31a8.12 8.12 0 1 1 6.91 3.82Zm4.46-6.1c-.24-.12-1.44-.71-1.66-.79-.22-.08-.38-.12-.54.12-.16.24-.63.79-.77.95-.14.16-.28.18-.52.06-.24-.12-1.03-.38-1.96-1.21-.72-.65-1.21-1.44-1.35-1.69-.14-.24-.01-.37.11-.49.11-.11.24-.28.36-.42.12-.14.16-.24.24-.4.08-.16.04-.3-.02-.42-.06-.12-.54-1.3-.74-1.78-.2-.47-.4-.4-.54-.41h-.46c-.16 0-.42.06-.64.3-.22.24-.84.82-.84 2s.86 2.32.98 2.48c.12.16 1.69 2.58 4.1 3.62.57.25 1.02.4 1.37.51.58.18 1.1.15 1.52.09.46-.07 1.44-.59 1.64-1.16.2-.57.2-1.06.14-1.16-.06-.1-.22-.16-.46-.28Z" /></svg>;
 }

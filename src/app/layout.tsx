@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import { Header } from "@/components/Header";
-import { MobileBottomNav } from "@/components/MobileBottomNav";
+import { MainShell } from "@/components/MainShell";
 import { AskExpertWidget } from "@/components/AskExpertWidget";
 
 const poppins = localFont({
@@ -27,11 +27,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="en" className={`${poppins.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
         <Header />
-        <main className="flex-1 pb-24 sm:pb-0">{children}</main>
+        <MainShell>{children}</MainShell>
         <footer className="hidden border-t border-border bg-surface px-4 py-7 text-center text-xs text-muted sm:block">
           Wild Excursions · Frontend demo — sample availability and prices; no enquiry is submitted.
         </footer>
-        <MobileBottomNav />
         <AskExpertWidget />
       </body>
     </html>

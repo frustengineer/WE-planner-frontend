@@ -18,6 +18,8 @@ const initialState: BookingState = {
   resortId: null,
   specialFares: [],
   transfers: false,
+  transferVehicle: null,
+  couponCode: null,
 };
 
 type BookingContextValue = {

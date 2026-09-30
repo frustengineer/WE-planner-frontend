@@ -101,4 +101,8 @@ export type BookingState = {
   resortId: string | null;
   specialFares: Array<"group_of_4" | "senior" | "gst" | "armed_forces" | "medical">;
   transfers: boolean;
+  /** Chosen on the transfers step: a vehicle, "own" (no transfer), or null if not chosen yet. */
+  transferVehicle: import("./transfers").TransferChoice | null;
+  /** Coupon code applied on the review step, e.g. "LONGWEEKEND". */
+  couponCode: string | null;
 };

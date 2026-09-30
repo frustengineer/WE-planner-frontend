@@ -26,6 +26,7 @@ export default function Step2() {
   const [error, setError] = useState<string | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [tripDetailsOpen, setTripDetailsOpen] = useState(false);
   const [availability, setAvailability] = useState<AvailabilitySnapshot[]>([]);
   const [recommendation, setRecommendation] = useState<PreferredRecommendation | null>(null);
   const [activeZoneType, setActiveZoneType] = useState<ZoneType>("buffer");
@@ -236,7 +237,7 @@ export default function Step2() {
               <BackIcon />
             </button>
             <div className="min-w-0 text-center">
-              <p className="text-[9px] font-extrabold uppercase tracking-[0.16em] text-[#4d7863]">Step 2 of 4</p>
+              <p className="text-[9px] font-extrabold uppercase tracking-[0.16em] text-[#4d7863]">Step 1 of 3</p>
               <h1 className="font-display truncate text-xl font-bold leading-tight text-[#17201c] sm:text-2xl">Safari permits</h1>
             </div>
             <div className="flex items-center justify-end gap-2">
@@ -249,7 +250,7 @@ export default function Step2() {
             </div>
           </div>
           <div className="mx-auto max-w-md">
-            <StepIndicator current={2} />
+            <StepIndicator current={1} currentTone="green" />
           </div>
         </div>
 
@@ -411,7 +412,7 @@ export default function Step2() {
                     {state.transfers && (
                       <div className="cart-item-in flex items-center justify-between gap-3 px-4 py-3">
                         <div><p className="text-xs font-extrabold text-[#203028]">Pickup & drop transfers</p><p className="mt-0.5 text-[10px] text-[#718078]">Complete trip</p></div>
-                        <button type="button" onClick={() => update({ transfers: false })} className="text-[10px] font-extrabold text-danger hover:underline">Remove</button>
+                        <button type="button" onClick={() => update({ transfers: false, transferVehicle: null })} className="text-[10px] font-extrabold text-danger hover:underline">Remove</button>
                       </div>
                     )}
                   </>
@@ -431,14 +432,65 @@ export default function Step2() {
           </div>
         </div>
 
-        <div className="fixed inset-x-0 bottom-0 z-50 border-t border-[#d8dedb] bg-white/95 px-4 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 shadow-[0_-8px_28px_rgba(24,33,29,0.12)] backdrop-blur-xl sm:hidden">
-          {error && <p className="mb-2 text-center text-[10px] font-bold text-danger">{error}</p>}
-          <div className="mx-auto flex max-w-xl items-center gap-3">
-            <button type="button" onClick={() => document.getElementById("safari-cart")?.scrollIntoView({ behavior: "smooth" })} className="min-w-0 flex-1 text-left">
-              <span className="block text-[10px] font-semibold text-[#748078]">{cartItemCount} items · View plan</span>
-              <span className="block text-lg font-extrabold text-[#18211d]">₹{cartTotal.toLocaleString("en-IN")}</span>
-            </button>
-            <button type="submit" disabled={loading} className="rounded-xl bg-[#fdcb08] px-5 py-3.5 text-sm font-extrabold text-black shadow-[0_8px_20px_rgba(253,203,8,0.28)] disabled:opacity-50">Continue →</button>
+        <div className="fixed inset-x-3 bottom-3 z-50 sm:hidden" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
+          {error && <p className="mb-2 rounded-xl bg-white px-3 py-2 text-center text-[11px] font-bold text-danger shadow-md">{error}</p>}
+          {tripDetailsOpen && state.plan.length > 0 && (
+            <div className="mb-2 max-h-[45vh] overflow-y-auto rounded-2xl bg-[#161c19] p-3.5 text-white shadow-[0_14px_32px_rgba(0,0,0,0.3)]">
+              <div className="mb-2 flex items-center justify-between">
+                <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-[#FFE36D]">Your safaris</p>
+                <button type="button" onClick={() => setTripDetailsOpen(false)} aria-label="Hide details" className="text-xs font-bold text-white/60">Hide</button>
+              </div>
+              <ul className="divide-y divide-white/10">
+                {state.plan.map((safari) => (
+                  <li key={`${safari.zone.id}-${safari.date}-${safari.session}`} className="flex items-start justify-between gap-3 py-2.5">
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-semibold text-white/60">Safari {safari.safariNumber} · {formatDayDate(safari.date)}</p>
+                      <p className="truncate text-sm font-bold">{safari.zone.name}</p>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <p className="text-xs font-bold">{safari.session === "morning" ? "Morning" : "Evening"}</p>
+                      <p className="text-[10px] capitalize text-white/60">{safari.zone.type}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          <div className="flex items-stretch gap-2">
+            <div className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl bg-[#161c19] px-3.5 py-3 shadow-[0_14px_32px_rgba(0,0,0,0.3)]">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/tiles/gypsy.png" alt="" aria-hidden="true" className="h-[46px] w-[46px] max-w-none object-contain" />
+              </span>
+              {state.plan.length === 0 ? (
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-bold text-white">Add safaris to your plan</p>
+                  <p className="truncate text-xs text-white/70">Pick a slot as per your convenience</p>
+                </div>
+              ) : (
+                <button type="button" onClick={() => setTripDetailsOpen((open) => !open)} aria-expanded={tripDetailsOpen} className="min-w-0 flex-1 text-left">
+                  <p className="truncate text-sm font-bold text-white">
+                    {state.plan.length} {state.plan.length === 1 ? "safari" : "safaris"} added · ₹{cartTotal.toLocaleString("en-IN")}
+                  </p>
+                  <p className="truncate text-xs text-white/70">
+                    {state.plan.map((safari) => `${formatShort(safari.date)} ${safari.session === "morning" ? "AM" : "PM"}`).join(" · ")}
+                  </p>
+                </button>
+              )}
+            </div>
+
+            {state.plan.length > 0 && (
+              <button
+                type="submit"
+                disabled={loading}
+                className="group flex shrink-0 flex-col items-center justify-center rounded-2xl bg-[#FDCB08] px-5 py-2.5 text-[#1c1608] shadow-[inset_0_1px_0_rgba(255,255,255,0.6),0_14px_32px_rgba(0,0,0,0.28)] transition active:scale-95 disabled:opacity-50"
+              >
+                <span className="flex items-center gap-1.5 text-[15px] font-extrabold leading-tight">
+                  Continue
+                  <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4 transition-transform group-hover:translate-x-0.5" fill="none" stroke="currentColor" strokeWidth="2.6"><path d="M5 12h14m-6-6 6 6-6 6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                </span>
+              </button>
+            )}
           </div>
         </div>
       </form>
@@ -454,6 +506,10 @@ function SummaryChip({ icon, label, onClick }: { icon: React.ReactNode; label: s
       <svg aria-hidden="true" viewBox="0 0 16 16" className="h-3 w-3 text-[#819087]" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="m6 4 4 4-4 4" strokeLinecap="round" strokeLinejoin="round" /></svg>
     </button>
   );
+}
+
+function formatDayDate(iso: string) {
+  return new Date(`${iso}T00:00:00`).toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
 }
 
 function formatShort(iso: string) {

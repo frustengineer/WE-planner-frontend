@@ -29,7 +29,7 @@ function ConfirmationContent() {
   }, [id]);
 
   return (
-    <div className="mx-auto max-w-xl px-4 py-16 text-center sm:px-6 sm:py-24">
+    <div className="mx-auto max-w-xl px-4 pb-16 text-center sm:px-6 sm:pb-24">
       <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-brand text-3xl text-white">
         ✓
       </div>

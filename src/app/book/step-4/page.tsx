@@ -25,6 +25,12 @@ export default function Step4() {
   const [email, setEmail] = useState("");
   const [mobile, setMobile] = useState("");
   const [agreed, setAgreed] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+
+  function showToast(msg: string) {
+    setToast(msg);
+    setTimeout(() => setToast(null), 3500);
+  }
 
   function updateTraveller(idx: number, field: keyof TravellerInfo, value: string) {
     setTravellerInfo((prev) => prev.map((t, i) => i === idx ? { ...t, [field]: value } : t));
@@ -92,6 +98,27 @@ export default function Step4() {
 
   function handleComplete(event: React.FormEvent) {
     event.preventDefault();
+    // Validate traveller details first
+    if (!contactDone) {
+      setOpen(1);
+      const firstIncomplete = travellerInfo.slice(0, travellers).findIndex((t) => !t.name.trim() || !t.dob || !t.gender);
+      const incompleteIdx = firstIncomplete >= 0 ? firstIncomplete : 0;
+      setExpandedTraveller(incompleteIdx);
+      // Specific message about what's missing
+      const t = travellerInfo[incompleteIdx];
+      const missing = !t.name.trim() ? "full name" : !t.dob ? "date of birth" : !t.gender ? "gender" : !email.includes("@") ? "email" : "mobile number";
+      showToast(`Please fill in the ${missing} for Traveller ${incompleteIdx + 1} to continue.`);
+      setTimeout(() => {
+        document.getElementById("traveller-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
+      return;
+    }
+    // Validate checkbox
+    if (!agreed) {
+      showToast("Please accept the cancellation policy & terms to complete your booking.");
+      document.getElementById("agree-checkbox")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
     const demoId = `DEMO-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
     sessionStorage.setItem(`demo-plan:${demoId}`, JSON.stringify({
       range: state.range, safariCount: state.plan.length,
@@ -191,6 +218,7 @@ export default function Step4() {
           })()}
 
           {/* ── Section 1: Traveller Details ── */}
+          <div id="traveller-section">
           <AccordionSection
             num={1} total={4} title="Traveller Details"
             done={contactDone} open={open === 1} onToggle={() => setOpen(open === 1 ? 2 : 1)}
@@ -302,6 +330,7 @@ export default function Step4() {
               </div>
             </div>
           </AccordionSection>
+          </div>
 
           {/* ── Day-wise Itinerary ── */}
           {state.startDate && <DayItinerary state={state} resort={resort} transferChoice={transferChoice} />}
@@ -365,7 +394,7 @@ export default function Step4() {
 
           {/* ── Important Info ── */}
           <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-[18px] bg-white p-4 shadow-sm">
-            <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[#1f6b48]" />
+            <input id="agree-checkbox" type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[#1f6b48]" />
             <p className="text-[11px] leading-5 text-[#4f5a54]">
               I confirm that I have read and accept the <span className="font-bold text-[#17201c]">Cancellation Policy</span> and <span className="font-bold text-[#17201c]">Terms of Service</span> of Wild Excursions.
             </p>
@@ -380,8 +409,8 @@ export default function Step4() {
               <p className="text-xl font-black text-[#17201c]">₹{total.toLocaleString("en-IN")}</p>
               {savings > 0 && <p className="text-[9px] font-bold text-[#17633b]">You save ₹{savings.toLocaleString("en-IN")}</p>}
             </div>
-            <button type="submit" disabled={!agreed}
-              className="rounded-2xl bg-[#fdcb08] px-7 py-3.5 text-sm font-extrabold text-[#111] shadow-[0_8px_20px_rgba(253,203,8,0.3)] disabled:opacity-40 active:scale-95">
+            <button type="submit"
+              className="rounded-2xl bg-[#fdcb08] px-7 py-3.5 text-sm font-extrabold text-[#111] shadow-[0_8px_20px_rgba(253,203,8,0.3)] active:scale-95">
               Complete plan →
             </button>
           </div>
@@ -421,6 +450,18 @@ export default function Step4() {
           </div>
         )}
       </form>
+      {/* ── Toast notification ── */}
+      {toast && (
+        <div className="fixed inset-x-4 top-20 z-[70] flex items-start gap-3 rounded-2xl bg-[#b3261e] px-4 py-3.5 shadow-[0_8px_28px_rgba(179,38,30,0.35)] sm:left-1/2 sm:w-full sm:max-w-sm sm:-translate-x-1/2" role="alert">
+          <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/20 text-white">
+            <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M10 6v4m0 4h.01" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          </span>
+          <p className="flex-1 text-sm font-semibold leading-snug text-white">{toast}</p>
+          <button type="button" onClick={() => setToast(null)} className="ml-1 text-white/70 hover:text-white">
+            <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M5 5l10 10M15 5 5 15" strokeLinecap="round" /></svg>
+          </button>
+        </div>
+      )}
     </main>
   );
 }
@@ -474,7 +515,7 @@ function DayItinerary({ state, resort, transferChoice }: {
             .sort((a, b) => (a.session === "morning" ? -1 : 1) - (b.session === "morning" ? -1 : 1))
             .forEach((s) => {
               activities.push({
-                icon: s.session === "morning" ? <SunIcon /> : <MoonSmIcon />,
+                icon: s.session === "morning" ? <SafariMorningIcon /> : <SafariEveningIcon />,
                 text: `${s.session === "morning" ? "Morning" : "Evening"} safari · ${s.zone.name}`,
                 sub: `${s.zone.type === "core" ? "Core zone" : "Buffer zone"} · ${s.gypsiesRequired} gypsy`,
                 color: s.session === "morning" ? "bg-[#fff4bd] text-[#8c6900]" : "bg-[#ecebff] text-[#5146a5]",
@@ -525,8 +566,35 @@ function DayItinerary({ state, resort, transferChoice }: {
   );
 }
 
-function CarIcon() { return <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M5 17H3v-5l2-5h14l2 5v5h-2M5 17h14M5 17a2 2 0 1 0 4 0m6 0a2 2 0 1 0 4 0" strokeLinecap="round" strokeLinejoin="round" /></svg>; }
-function HotelIcon() { return <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" strokeLinecap="round" strokeLinejoin="round" /><path d="M9 22V12h6v10" strokeLinecap="round" strokeLinejoin="round" /></svg>; }
+function CarIcon() {
+  return (
+    <svg viewBox="0 -960 960 960" className="h-4 w-4" fill="currentColor">
+      <path d="M240-200v40q0 17-11.5 28.5T200-120h-40q-17 0-28.5-11.5T120-160v-320l84-240q6-18 21.5-29t34.5-11h100v-80h240v80h100q19 0 34.5 11t21.5 29l84 240v320q0 17-11.5 28.5T800-120h-40q-17 0-28.5-11.5T720-160v-40H240Zm-8-360h496l-42-120H274l-42 120Zm-32 80v200-200Zm100 160q25 0 42.5-17.5T360-380q0-25-17.5-42.5T300-440q-25 0-42.5 17.5T240-380q0 25 17.5 42.5T300-320Zm360 0q25 0 42.5-17.5T720-380q0-25-17.5-42.5T660-440q-25 0-42.5 17.5T600-380q0 25 17.5 42.5T660-320Zm-460 40h560v-200H200v200Z" />
+    </svg>
+  );
+}
+function HotelIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+      <path d="M9 22V12h6v10" />
+    </svg>
+  );
+}
+function SafariMorningIcon() {
+  return (
+    <svg viewBox="0 -960 960 960" className="h-4 w-4" fill="currentColor">
+      <path d="M480-260q75 0 127.5-52.5T660-440q0-75-52.5-127.5T480-620q-75 0-127.5 52.5T300-440q0 75 52.5 127.5T480-260Zm0-80q-42 0-71-29t-29-71q0-42 29-71t71-29q42 0 71 29t29 71q0 42-29 71t-71 29ZM160-120q-33 0-56.5-23.5T80-200v-480q0-33 23.5-56.5T160-760h126l74-80h240l74 80h126q33 0 56.5 23.5T880-680v480q0 33-23.5 56.5T800-120H160Zm0-80h640v-480H638l-73-80H395l-73 80H160v480Zm320-240Z" />
+    </svg>
+  );
+}
+function SafariEveningIcon() {
+  return (
+    <svg viewBox="0 -960 960 960" className="h-4 w-4" fill="currentColor">
+      <path d="M480-80q-134 0-227-93t-93-227v-200q0-122 96-201t224-79q128 0 224 79t96 201v520H480Zm0-80h80q-19-25-29.5-55.5T520-280v-42q-10 1-20 1.5t-20 .5q-67 0-129.5-23.5T240-415v15q0 100 70 170t170 70Zm120-120q0 50 35 85t85 35v-255q-26 26-56 44.5T600-340v60ZM440-560q0-66-45-111t-109-48q-22 24-34 54t-12 65q0 89 72.5 144.5T480-400q95 0 167.5-55.5T720-600q0-35-12-65.5T674-720q-64 2-109 48t-45 112h-80Zm-128.5-11.5Q300-583 300-600t11.5-28.5Q323-640 340-640t28.5 11.5Q380-617 380-600t-11.5 28.5Q357-560 340-560t-28.5-11.5Zm280 0Q580-583 580-600t11.5-28.5Q603-640 620-640t28.5 11.5Q660-617 660-600t-11.5 28.5Q637-560 620-560t-28.5-11.5ZM370-778q34 14 62 37t48 52q20-29 47.5-52t61.5-37q-25-11-52.5-16.5T480-800q-29 0-56.5 5.5T370-778Zm430 618H520h280Zm-320 0q-100 0-170-70t-70-170q0 100 70 170t170 70h80-80Zm120-120q0 50 35 85t85 35q-50 0-85-35t-35-85ZM480-689Z" />
+    </svg>
+  );
+}
 
 /* ─── Accordion section ─── */
 function AccordionSection({
@@ -623,5 +691,3 @@ function WhatsAppIcon() { return <svg viewBox="0 0 24 24" className="h-5 w-5" fi
 function PeopleIcon() { return <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="9" cy="8" r="3" /><path d="M3 20a6 6 0 0 1 12 0M16 5.5a3 3 0 0 1 0 5.5M16 14a5 5 0 0 1 5 5" strokeLinecap="round" /></svg>; }
 function SafariIcon() { return <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M4 17h16M7 17l1.5-7h7L17 17M10 10V7h4v3" strokeLinecap="round" strokeLinejoin="round" /><circle cx="8" cy="19" r="1.5" /><circle cx="16" cy="19" r="1.5" /></svg>; }
 function MoonIcon() { return <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M20 15.2A8.2 8.2 0 0 1 8.8 4a8.4 8.4 0 1 0 11.2 11.2Z" strokeLinecap="round" strokeLinejoin="round" /></svg>; }
-function SunIcon() { return <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.9"><circle cx="12" cy="12" r="3.5" /><path d="M12 2.5v2M12 19.5v2M4.5 4.5l1.4 1.4M18.1 18.1l1.4 1.4M2.5 12h2M19.5 12h2M4.5 19.5l1.4-1.4M18.1 5.9l1.4-1.4" strokeLinecap="round" /></svg>; }
-function MoonSmIcon() { return <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.9"><path d="M20 15.2A8.2 8.2 0 0 1 8.8 4a8.4 8.4 0 1 0 11.2 11.2Z" strokeLinecap="round" strokeLinejoin="round" /></svg>; }

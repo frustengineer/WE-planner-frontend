@@ -26,13 +26,8 @@ export function StepOneClient({ jungles }: { jungles: Jungle[] }) {
   }, [jungle, state.range, update]);
   const [junglePickerOpen, setJunglePickerOpen] = useState(false);
   const [lengthPickerOpen, setLengthPickerOpen] = useState(false);
-  const [calendarOpen, setCalendarOpen] = useState(false);
-  const [calendarMonth, setCalendarMonth] = useState(() => {
-    const base = state.startDate ? new Date(`${state.startDate}T00:00:00`) : new Date();
-    return new Date(base.getFullYear(), base.getMonth(), 1);
-  });
-  const [dateFlexibility, setDateFlexibility] = useState<0 | 1 | 2 | 3>(0);
   const [travellerPickerOpen, setTravellerPickerOpen] = useState(false);
+  const dateInputRef = useRef<HTMLInputElement>(null);
   const appliedQueryJungle = useRef(false);
   const specialFaresSliderRef = useRef<HTMLDivElement>(null);
   const occupancy = calculatePartyOccupancy(state.numAdults, state.childAges);
@@ -65,7 +60,7 @@ export function StepOneClient({ jungles }: { jungles: Jungle[] }) {
             ? "trip-travellers-control"
             : null;
     /* eslint-disable react-hooks/set-state-in-effect -- URL-driven edit links intentionally open the requested Step 1 control after mount */
-    if (requestedEditor === "date") setCalendarOpen(true);
+    if (requestedEditor === "date") requestAnimationFrame(() => dateInputRef.current?.showPicker());
     if (requestedEditor === "travellers") setTravellerPickerOpen(true);
     /* eslint-enable react-hooks/set-state-in-effect */
     if (editorTarget) {
@@ -89,7 +84,6 @@ export function StepOneClient({ jungles }: { jungles: Jungle[] }) {
     if (except !== "jungle") setJunglePickerOpen(false);
     if (except !== "length") setLengthPickerOpen(false);
     if (except !== "travellers") setTravellerPickerOpen(false);
-    setCalendarOpen(false);
   }
 
   function handleContinue(event: React.FormEvent) {
@@ -230,20 +224,13 @@ export function StepOneClient({ jungles }: { jungles: Jungle[] }) {
           )}
 
           <div className="grid grid-cols-2 gap-3">
-            <button
+            <div
               id="trip-date-control"
-              type="button"
-              aria-expanded={calendarOpen}
-              onClick={() => {
-                const next = !calendarOpen;
-                closePickers();
-                if (next) {
-                  const base = state.startDate ? new Date(`${state.startDate}T00:00:00`) : new Date();
-                  setCalendarMonth(new Date(base.getFullYear(), base.getMonth(), 1));
-                }
-                setCalendarOpen(next);
-              }}
-              className={`group relative flex min-h-[88px] w-full items-center gap-2 rounded-2xl border bg-white px-2.5 py-3 text-left shadow-[0_2px_8px_rgba(17,17,17,0.03)] transition hover:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 sm:gap-3 sm:px-4 ${calendarOpen ? "border-accent ring-2 ring-accent/10" : "border-[#eadfae]"}`}
+              role="button"
+              tabIndex={0}
+              onClick={() => { closePickers(); dateInputRef.current?.showPicker(); }}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); dateInputRef.current?.showPicker(); } }}
+              className="group relative flex min-h-[88px] w-full cursor-pointer items-center gap-2 rounded-2xl border border-[#eadfae] bg-white px-2.5 py-3 text-left shadow-[0_2px_8px_rgba(17,17,17,0.03)] transition hover:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 sm:gap-3 sm:px-4"
             >
               <FieldIcon type="date" />
               <span className="min-w-0 flex-1">
@@ -252,7 +239,18 @@ export function StepOneClient({ jungles }: { jungles: Jungle[] }) {
                   {state.startDate ? formatDateField(state.startDate) : "dd-mm-yyyy"}
                 </span>
               </span>
-            </button>
+              <input
+                ref={dateInputRef}
+                type="date"
+                min={today}
+                max={PLANNING_HORIZON}
+                value={state.startDate ?? ""}
+                onChange={(e) => { if (e.target.value) update({ startDate: e.target.value, recommendedStartDate: null, plan: [] }); }}
+                className="pointer-events-none absolute inset-0 h-full w-full opacity-0"
+                tabIndex={-1}
+                aria-hidden="true"
+              />
+            </div>
 
             <SelectionButton compact icon="length" label="Travel length" value={`${state.nights}N / ${state.nights + 1}D`} open={lengthPickerOpen} onClick={() => {
               const next = !lengthPickerOpen;
@@ -260,20 +258,6 @@ export function StepOneClient({ jungles }: { jungles: Jungle[] }) {
               setLengthPickerOpen(next);
             }} />
           </div>
-
-          {calendarOpen && (
-            <SafariCalendar
-              month={calendarMonth}
-              selectedDate={state.startDate}
-              minDate={today}
-              maxDate={PLANNING_HORIZON}
-              flexibility={dateFlexibility}
-              onFlexibilityChange={setDateFlexibility}
-              onMonthChange={setCalendarMonth}
-              onSelect={(date) => update({ startDate: date, recommendedStartDate: null, plan: [] })}
-              onDone={() => setCalendarOpen(false)}
-            />
-          )}
 
           {lengthPickerOpen && (
             <div className="grid grid-cols-5 gap-1.5 rounded-xl border border-border bg-white p-3 shadow-sm">
@@ -508,115 +492,6 @@ function PaymentShortcut() {
   );
 }
 
-function SafariCalendar({
-  month,
-  selectedDate,
-  minDate,
-  maxDate,
-  flexibility,
-  onMonthChange,
-  onSelect,
-  onFlexibilityChange,
-  onDone,
-}: {
-  month: Date;
-  selectedDate: string | null;
-  minDate: string;
-  maxDate: string;
-  flexibility: 0 | 1 | 2 | 3;
-  onMonthChange: (month: Date) => void;
-  onSelect: (date: string) => void;
-  onFlexibilityChange: (value: 0 | 1 | 2 | 3) => void;
-  onDone: () => void;
-}) {
-  const year = month.getFullYear();
-  const monthIndex = month.getMonth();
-  const firstWeekday = new Date(year, monthIndex, 1).getDay();
-  const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
-  const previousMonth = new Date(year, monthIndex - 1, 1);
-  const nextMonth = new Date(year, monthIndex + 1, 1);
-  const canGoPrevious = toCalendarISO(new Date(year, monthIndex + 1, 0)) >= minDate;
-  const canGoNext = toCalendarISO(nextMonth) <= maxDate;
-  const cells = Array.from({ length: firstWeekday + daysInMonth }, (_, index) =>
-    index < firstWeekday ? null : index - firstWeekday + 1
-  );
-
-  return (
-    <div className="overflow-hidden rounded-[24px] border border-[#e3e3e3] bg-white shadow-[0_16px_36px_rgba(17,17,17,0.12)]">
-      <div className="flex items-center justify-between px-4 pb-3 pt-4">
-        <button
-          type="button"
-          aria-label="Previous month"
-          disabled={!canGoPrevious}
-          onClick={() => onMonthChange(previousMonth)}
-          className="flex h-8 w-8 items-center justify-center rounded-full bg-[#f1f1f1] text-lg text-brand-dark transition hover:bg-[#e5e5e5] disabled:opacity-30"
-        >
-          ‹
-        </button>
-        <p className="text-sm font-bold text-brand-dark">
-          {month.toLocaleDateString("en-IN", { month: "long", year: "numeric" })}
-        </p>
-        <button
-          type="button"
-          aria-label="Next month"
-          disabled={!canGoNext}
-          onClick={() => onMonthChange(nextMonth)}
-          className="flex h-8 w-8 items-center justify-center rounded-full bg-[#f1f1f1] text-lg text-brand-dark transition hover:bg-[#e5e5e5] disabled:opacity-30"
-        >
-          ›
-        </button>
-      </div>
-
-      <div className="grid grid-cols-7 px-3 text-center">
-        {["S", "M", "T", "W", "T", "F", "S"].map((day, index) => (
-          <span key={`${day}-${index}`} className="pb-2 text-[10px] font-semibold text-[#9a9a9a]">{day}</span>
-        ))}
-        {cells.map((day, index) => {
-          if (day === null) return <span key={`blank-${index}`} className="h-10" />;
-          const iso = toCalendarISO(new Date(year, monthIndex, day));
-          const disabled = iso < minDate || iso > maxDate;
-          const selected = iso === selectedDate;
-          return (
-            <button
-              type="button"
-              key={iso}
-              disabled={disabled}
-              onClick={() => onSelect(iso)}
-              className={`mx-auto flex h-10 w-10 items-center justify-center rounded-full text-xs transition ${selected ? "bg-[#111] font-bold text-white" : disabled ? "cursor-not-allowed text-[#d2d2d2]" : "text-[#333] hover:bg-[#f2f2f2]"}`}
-            >
-              {day}
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="flex gap-2 overflow-x-auto border-t border-border px-3 py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {([0, 1, 2, 3] as const).map((value) => (
-          <button
-            type="button"
-            key={value}
-            onClick={() => onFlexibilityChange(value)}
-            className={`shrink-0 rounded-full border px-3 py-2 text-[11px] font-semibold transition ${flexibility === value ? "border-brand-dark bg-brand-dark text-white" : "border-[#d8d8d8] bg-white text-brand-dark"}`}
-          >
-            {value === 0 ? "Exact dates" : `± ${value} ${value === 1 ? "day" : "days"}`}
-          </button>
-        ))}
-      </div>
-      {selectedDate && (
-        <div className="px-3 pb-3">
-          <button
-            type="button"
-            onClick={onDone}
-            className="w-full rounded-xl bg-accent px-4 py-3 text-sm font-bold text-black shadow-[0_8px_18px_rgba(202,156,0,0.22)] transition hover:bg-[#e7b900]"
-          >
-            Done
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
 function SpecialFareCard({ title, subtitle, badge, selected, onClick }: {
   title: string;
   subtitle: string;
@@ -696,13 +571,6 @@ function formatShort(iso: string) {
 function formatDateField(iso: string) {
   const [year, month, day] = iso.split("-");
   return `${day}-${month}-${year}`;
-}
-
-function toCalendarISO(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
 }
 
 function Stepper({ value, min, max, onChange }: { value: number; min: number; max: number; onChange: (value: number) => void }) {

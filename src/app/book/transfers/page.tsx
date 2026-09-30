@@ -36,7 +36,7 @@ export default function TransfersStep() {
 
   return (
     <main className="min-h-screen bg-[#f3f5f3] pb-32 sm:pb-10">
-      <div className="border-b border-[#e0e5e2] bg-white px-4 pb-2 pt-2 sm:rounded-b-[28px] sm:px-7 sm:shadow-[0_10px_30px_rgba(25,50,40,0.06)]">
+      <div className="sticky top-0 z-30 border-b border-[#e0e5e2] bg-white px-4 pb-2 pt-2 sm:rounded-b-[28px] sm:px-7 sm:shadow-[0_10px_30px_rgba(25,50,40,0.06)]">
         <div className="mx-auto grid max-w-4xl grid-cols-[40px_minmax(0,1fr)_72px] items-center gap-2">
           <button type="button" onClick={() => router.push("/book/step-3")} className="flex h-10 w-9 items-center justify-start text-[#17201c] transition hover:-translate-x-0.5 hover:text-[#1f6b48]" aria-label="Back to resort selection">
             <BackIcon />
@@ -59,7 +59,9 @@ export default function TransfersStep() {
         </div>
       </div>
 
-      <div className="mx-auto max-w-4xl px-4 py-5 sm:px-6 sm:py-8">
+      <div className="mx-auto max-w-4xl px-4 py-5 sm:px-6 sm:py-8 lg:max-w-[1200px] lg:grid lg:grid-cols-[1fr_300px] lg:items-start lg:gap-8 lg:px-8 lg:py-10">
+        {/* ── Left column ── */}
+        <div className="min-w-0">
         <div className="px-1">
           <p className="text-[9px] font-extrabold uppercase tracking-[0.16em] text-[#777777]">Getting there</p>
           <h2 className="font-display mt-1 text-[28px] font-bold leading-tight text-[#111111] sm:text-4xl">How will you reach the jungle?</h2>
@@ -100,9 +102,72 @@ export default function TransfersStep() {
           </button>
         </div>
 
-        <div className="mt-6 hidden items-center justify-between rounded-[20px] bg-white p-4 shadow-sm sm:flex">
+        <div className="mt-6 hidden items-center justify-between rounded-[20px] bg-white p-4 shadow-sm sm:flex lg:hidden">
           <button type="button" onClick={() => router.push("/book/step-3")} className="rounded-xl px-5 py-3 text-sm font-bold text-[#4f5a54]">Back</button>
           <button type="button" onClick={next} disabled={!chosen} className="rounded-xl bg-[#fdcb08] px-8 py-3.5 text-sm font-extrabold text-[#111111] shadow-[0_8px_20px_rgba(253,203,8,0.28)] disabled:opacity-40">Continue to review →</button>
+        </div>
+        </div>{/* end left column */}
+
+        {/* ── Right sidebar (desktop only) ── */}
+        <div className="hidden lg:block lg:shrink-0">
+          <div className="sticky top-4 space-y-4">
+            {/* Booking context card */}
+            <div className="overflow-hidden rounded-[22px] bg-white shadow-[0_8px_24px_rgba(17,17,17,0.08)]">
+              <div className="bg-[#17201c] px-5 py-4">
+                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/50">Your trip</p>
+                <p className="mt-1 text-lg font-extrabold text-white">Booking summary</p>
+              </div>
+              <ul className="divide-y divide-[#f0f2f1]">
+                {state.range && (
+                  <li className="flex items-center gap-3 px-5 py-3">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#eaf6ee]">
+                      <svg viewBox="0 0 24 24" className="h-4 w-4 text-[#1f6b48]" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 21s7-5.4 7-12a7 7 0 1 0-14 0c0 6.6 7 12 7 12Z" strokeLinecap="round" strokeLinejoin="round"/><circle cx="12" cy="9" r="2.5"/></svg>
+                    </span>
+                    <div>
+                      <p className="text-[10px] text-[#68736d]">Jungle</p>
+                      <p className="text-sm font-bold text-[#17201c]">Tadoba · {state.range} Range</p>
+                    </div>
+                  </li>
+                )}
+                {state.startDate && (
+                  <li className="flex items-center gap-3 px-5 py-3">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#fff4bd]">
+                      <svg viewBox="0 0 24 24" className="h-4 w-4 text-[#8c6900]" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18" strokeLinecap="round"/></svg>
+                    </span>
+                    <div>
+                      <p className="text-[10px] text-[#68736d]">Dates</p>
+                      <p className="text-sm font-bold text-[#17201c]">{new Date(`${state.startDate}T00:00:00`).toLocaleDateString("en-IN", { day: "numeric", month: "short" })} · {state.nights}N/{state.nights + 1}D</p>
+                    </div>
+                  </li>
+                )}
+                {state.plan.length > 0 && (
+                  <li className="flex items-center gap-3 px-5 py-3">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#ecebff]">
+                      <svg viewBox="0 -960 960 960" className="h-4 w-4 text-[#5146a5]" fill="currentColor"><path d="M480-260q75 0 127.5-52.5T660-440q0-75-52.5-127.5T480-620q-75 0-127.5 52.5T300-440q0 75 52.5 127.5T480-260Zm0-80q-42 0-71-29t-29-71q0-42 29-71t71-29q42 0 71 29t29 71q0 42-29 71t-71 29ZM160-120q-33 0-56.5-23.5T80-200v-480q0-33 23.5-56.5T160-760h126l74-80h240l74 80h126q33 0 56.5 23.5T880-680v480q0 33-23.5 56.5T800-120H160Zm0-80h640v-480H638l-73-80H395l-73 80H160v480Zm320-240Z"/></svg>
+                    </span>
+                    <div>
+                      <p className="text-[10px] text-[#68736d]">Safaris</p>
+                      <p className="text-sm font-bold text-[#17201c]">{state.plan.length} permit{state.plan.length !== 1 ? "s" : ""} selected</p>
+                    </div>
+                  </li>
+                )}
+                {chosen && chosen !== "own" && (
+                  <li className="flex items-center gap-3 px-5 py-3">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#e8f4ff]">
+                      <svg viewBox="0 -960 960 960" className="h-4 w-4 text-[#1a5fa8]" fill="currentColor"><path d="M240-200v40q0 17-11.5 28.5T200-120h-40q-17 0-28.5-11.5T120-160v-320l84-240q6-18 21.5-29t34.5-11h100v-80h240v80h100q19 0 34.5 11t21.5 29l84 240v320q0 17-11.5 28.5T800-120h-40q-17 0-28.5-11.5T720-160v-40H240Zm-8-360h496l-42-120H274l-42 120Zm100 160q25 0 42.5-17.5T360-380q0-25-17.5-42.5T300-440q-25 0-42.5 17.5T240-380q0 25 17.5 42.5T300-320Zm360 0q25 0 42.5-17.5T720-380q0-25-17.5-42.5T660-440q-25 0-42.5 17.5T600-380q0 25 17.5 42.5T660-320Zm-460 40h560v-200H200v200Z"/></svg>
+                    </span>
+                    <div>
+                      <p className="text-[10px] text-[#68736d]">Transfer</p>
+                      <p className="text-sm font-bold text-[#17201c]">{chosenVehicle?.name ?? "Selected"}</p>
+                    </div>
+                  </li>
+                )}
+              </ul>
+            </div>
+            <button type="button" onClick={next} disabled={!chosen} className="w-full rounded-2xl bg-[#fdcb08] px-6 py-3.5 text-sm font-extrabold text-[#111111] shadow-[0_8px_20px_rgba(253,203,8,0.28)] transition hover:bg-[#edbd00] disabled:opacity-40">
+              Continue to review →
+            </button>
+          </div>
         </div>
       </div>
 

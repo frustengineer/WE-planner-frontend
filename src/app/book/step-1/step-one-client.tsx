@@ -136,11 +136,16 @@ export function StepOneClient({ jungles }: { jungles: Jungle[] }) {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[linear-gradient(180deg,#F9B233_0%,#FFD86B_16%,#FFF0D0_44%,#ffffff_70%)] pb-12">
-      <div className="relative">
+    <div className="relative min-h-screen overflow-hidden bg-[linear-gradient(180deg,#F9B233_0%,#FFD86B_16%,#FFF0D0_44%,#ffffff_70%)] pb-12 lg:pb-0">
+      <div className="relative lg:flex lg:min-h-screen">
+        {/* Hero — full width on mobile, sticky left half on desktop */}
+        <div className="lg:sticky lg:top-0 lg:h-screen lg:flex-1 lg:overflow-hidden">
         <SafariHero onBack={() => router.push("/")} />
+        </div>
 
-      <form onSubmit={handleContinue} className="relative z-10 -mt-8 mx-3 overflow-hidden rounded-[30px] bg-white/90 shadow-[0_24px_55px_rgba(120,90,0,0.22)] backdrop-blur-xl sm:mx-auto sm:max-w-3xl">
+        {/* Form + payment — right half on desktop */}
+        <div className="lg:flex lg:w-[480px] lg:shrink-0 lg:flex-col lg:overflow-y-auto lg:bg-white lg:px-2 lg:pt-12 lg:pb-16 lg:shadow-[-20px_0_60px_rgba(120,90,0,0.10)]">
+      <form onSubmit={handleContinue} className="relative z-10 -mt-8 mx-3 overflow-hidden rounded-[30px] bg-white/90 shadow-[0_24px_55px_rgba(120,90,0,0.22)] backdrop-blur-xl sm:mx-auto sm:max-w-3xl lg:mt-0 lg:rounded-[20px] lg:shadow-none lg:bg-white">
 
 
         <div className="space-y-3 bg-white/55 p-4 pb-5 sm:p-6">
@@ -334,7 +339,7 @@ export function StepOneClient({ jungles }: { jungles: Jungle[] }) {
         </div>
       </form>
 
-      <section className="mx-auto mt-8 w-full max-w-3xl px-3 sm:mt-10" aria-label="Payment options">
+      <section className="mx-auto mt-8 w-full max-w-3xl px-3 sm:mt-10 lg:mt-6 lg:max-w-none" aria-label="Payment options">
         <div className="relative z-20 overflow-hidden rounded-[26px] border border-[#f0e6bd] bg-white shadow-[0_14px_36px_rgba(120,90,0,0.12)]">
           <div className="h-1.5 bg-[linear-gradient(90deg,#FFE36D,#fdcb08,#FFE36D)]" aria-hidden="true" />
           <div className="px-5 pb-5 pt-4">
@@ -353,7 +358,7 @@ export function StepOneClient({ jungles }: { jungles: Jungle[] }) {
           </div>
         </div>
       </section>
-
+        </div>{/* end right panel */}
       </div>
     </div>
   );
@@ -363,7 +368,7 @@ export function StepOneClient({ jungles }: { jungles: Jungle[] }) {
 function SafariHero({ onBack }: { onBack: () => void }) {
   const circle = "flex h-11 w-11 items-center justify-center rounded-full bg-white/95 shadow-[0_4px_12px_rgba(120,60,0,0.22)] transition active:scale-95";
   return (
-    <header className="relative overflow-hidden pb-0 pt-4">
+    <header className="relative overflow-hidden pb-0 pt-4 lg:h-full">
       {/* sunburst */}
       <div
         aria-hidden="true"
@@ -388,12 +393,12 @@ function SafariHero({ onBack }: { onBack: () => void }) {
         width={300}
         height={304}
         priority
-        className="absolute right-14 top-0 h-32 w-auto select-none drop-shadow-md langoor-sway"
+        className="absolute right-14 top-0 h-32 w-auto select-none drop-shadow-md langoor-sway lg:h-52"
       />
 
       {/* Nav buttons */}
       <div className="relative mx-auto flex max-w-3xl items-center justify-between px-4 sm:px-6">
-        <button type="button" onClick={onBack} className={`${circle} text-[#17201c]`} aria-label="Back to home">
+        <button type="button" onClick={onBack} className="flex h-10 w-9 items-center justify-start text-[#17201c] transition hover:-translate-x-0.5 hover:text-[#1f6b48]" aria-label="Back to home">
           <BackIcon />
         </button>
         <a href="https://wa.me/?text=Hi%2C%20I%20need%20help%20planning%20my%20safari%20with%20Wild%20Excursions." target="_blank" rel="noreferrer" className={`${circle} text-[#18a957]`} aria-label="Chat on WhatsApp">

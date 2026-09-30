@@ -300,7 +300,9 @@ export default function Step2() {
           </div>
         </section>
 
-        <div className="mx-3 space-y-5 pt-5 sm:mx-5 sm:space-y-7 sm:pt-7 lg:mx-0">
+        <div className="pt-5 sm:pt-7 lg:mx-auto lg:flex lg:max-w-[1200px] lg:items-start lg:gap-8 lg:px-8 lg:pt-10">
+        {/* ── Left: permit sections ── */}
+        <div className="mx-3 min-w-0 flex-1 space-y-5 sm:mx-5 sm:space-y-7 lg:mx-0">
           {fetchError && <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-danger">{fetchError}</p>}
           {dateChangeNotice && <p className="rounded-xl border border-[#c8dccf] bg-[#eef8f1] px-4 py-3 text-xs font-semibold text-[#246441]">{dateChangeNotice}</p>}
 
@@ -381,6 +383,11 @@ export default function Step2() {
             </div>
           </section>
 
+          </div>{/* end left column */}
+
+          {/* ── Right: sticky cart sidebar ── */}
+          <div className="mx-3 sm:mx-5 lg:mx-0 lg:w-[300px] lg:shrink-0">
+            <div className="lg:sticky lg:top-4 lg:space-y-4">
           <div>
             <section id="safari-cart" className="overflow-hidden rounded-[26px] border border-[#18211d] bg-white shadow-[0_14px_34px_rgba(24,33,29,0.13)]">
               <div key={cartAnimationKey} className={`bg-[#18211d] p-5 text-white ${cartAnimationKey > 0 ? "cart-bump" : ""}`}>
@@ -423,14 +430,20 @@ export default function Step2() {
 
           {error && <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-center text-sm font-semibold text-danger" role="alert">{error}</p>}
 
-          <div className="hidden items-center justify-between rounded-[24px] border border-[#dfe4e1] bg-white p-4 shadow-lg sm:flex">
+          <div className="hidden items-center justify-between rounded-[24px] border border-[#dfe4e1] bg-white p-4 shadow-lg sm:flex lg:hidden">
             <button type="button" onClick={() => router.push("/book/step-1")} className="rounded-xl border border-[#d8dfdb] px-5 py-3 text-sm font-bold text-[#26372f]">Back</button>
             <div className="flex items-center gap-5">
               <div className="text-right"><p className="text-[10px] font-semibold text-[#748078]">Estimated total</p><p className="text-lg font-extrabold text-[#18211d]">₹{cartTotal.toLocaleString("en-IN")}</p></div>
               <button type="submit" disabled={loading} className="rounded-xl bg-[#fdcb08] px-8 py-3.5 text-sm font-extrabold text-black shadow-[0_8px_20px_rgba(253,203,8,0.28)] hover:bg-[#edbd00] disabled:opacity-50">Continue to review →</button>
             </div>
           </div>
-        </div>
+          {/* Desktop continue button (inside right sidebar) */}
+          <button type="submit" disabled={loading} className="hidden w-full rounded-2xl bg-[#fdcb08] py-3.5 text-sm font-extrabold text-black shadow-[0_8px_20px_rgba(253,203,8,0.28)] transition hover:bg-[#edbd00] disabled:opacity-50 lg:block">
+            Continue to resort →
+          </button>
+            </div>{/* end sticky wrapper */}
+          </div>{/* end right column */}
+        </div>{/* end lg:flex */}
 
         <div className="fixed inset-x-3 bottom-3 z-50 sm:hidden" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
           {error && <p className="mb-2 rounded-xl bg-white px-3 py-2 text-center text-[11px] font-bold text-danger shadow-md">{error}</p>}

@@ -42,7 +42,7 @@ export default function ResortStep() {
 
   return (
     <main className="min-h-screen bg-[#f3f5f3] pb-28 sm:pb-10">
-      <div className="border-b border-[#e0e5e2] bg-white px-4 pb-2 pt-2 sm:rounded-b-[28px] sm:px-7 sm:shadow-[0_10px_30px_rgba(25,50,40,0.06)]">
+      <div className="sticky top-0 z-30 border-b border-[#e0e5e2] bg-white px-4 pb-2 pt-2 sm:rounded-b-[28px] sm:px-7 sm:shadow-[0_10px_30px_rgba(25,50,40,0.06)]">
         <div className="mx-auto grid max-w-4xl grid-cols-[40px_minmax(0,1fr)_72px] items-center gap-2">
           <button type="button" onClick={() => router.push("/book/step-2")} className="flex h-10 w-9 items-center justify-start text-[#17201c] transition hover:-translate-x-0.5 hover:text-[#1f6b48]" aria-label="Back to safari permits">
             <BackIcon />
@@ -65,7 +65,9 @@ export default function ResortStep() {
         </div>
       </div>
 
-      <div className="mx-auto max-w-4xl px-4 py-5 sm:px-6 sm:py-8">
+      <div className="mx-auto max-w-4xl px-4 py-5 sm:px-6 sm:py-8 lg:max-w-[1200px] lg:grid lg:grid-cols-[1fr_300px] lg:items-start lg:gap-8 lg:px-8 lg:py-10">
+        {/* ── Left column ── */}
+        <div className="min-w-0">
         <section className="resort-offer-edge sticky top-0 z-40 -mx-4 bg-[#ffe36d] px-5 pb-5 pt-4 text-[#111111] sm:mx-0 sm:rounded-[24px] sm:px-6 sm:pb-6 sm:pt-5">
           <div className="flex items-center justify-between gap-4">
             <div className="min-w-0">
@@ -159,11 +161,80 @@ export default function ResortStep() {
 
         {resorts.length === 0 && <div className="mt-5 rounded-2xl border border-dashed border-[#ccd6d0] bg-white p-8 text-center text-sm text-[#6e7a73]">No stays match this filter.</div>}
 
-        <div className="mt-7 hidden items-center justify-between rounded-2xl bg-white p-4 shadow-sm sm:flex">
+        <div className="mt-7 hidden items-center justify-between rounded-2xl bg-white p-4 shadow-sm sm:flex lg:hidden">
           <button type="button" onClick={() => router.push(hasSafariPlan ? "/book/step-2" : "/")} className="rounded-xl px-5 py-3 text-sm font-bold text-[#425249]">Back</button>
           <div className="flex items-center gap-3">
             {hasSafariPlan && <button type="button" onClick={() => { update({ resortId: null }); continueToNext(); }} className="px-4 py-3 text-xs font-bold text-[#68756e]">Skip stay</button>}
             <button type="button" onClick={continueToNext} className="rounded-xl bg-[#fdcb08] px-7 py-3 text-sm font-extrabold text-[#17201c] shadow-[0_8px_20px_rgba(253,203,8,0.25)]">{hasSafariPlan ? "Continue to transfers →" : "Plan your safari →"}</button>
+          </div>
+        </div>
+        </div>{/* end left column */}
+
+        {/* ── Right sidebar (desktop only) ── */}
+        <div className="hidden lg:block lg:shrink-0">
+          <div className="sticky top-4 space-y-4">
+            {/* Booking summary card */}
+            <div className="overflow-hidden rounded-[22px] bg-white shadow-[0_8px_24px_rgba(17,17,17,0.08)]">
+              <div className="bg-[#17201c] px-5 py-4">
+                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/50">Your trip</p>
+                <p className="mt-1 text-lg font-extrabold text-white">Booking summary</p>
+              </div>
+              <ul className="divide-y divide-[#f0f2f1]">
+                {state.range && (
+                  <li className="flex items-center gap-3 px-5 py-3">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#eaf6ee]">
+                      <svg viewBox="0 0 24 24" className="h-4 w-4 text-[#1f6b48]" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 21s7-5.4 7-12a7 7 0 1 0-14 0c0 6.6 7 12 7 12Z" strokeLinecap="round" strokeLinejoin="round"/><circle cx="12" cy="9" r="2.5"/></svg>
+                    </span>
+                    <div>
+                      <p className="text-[10px] text-[#68736d]">Jungle</p>
+                      <p className="text-sm font-bold text-[#17201c]">Tadoba · {state.range} Range</p>
+                    </div>
+                  </li>
+                )}
+                {state.startDate && (
+                  <li className="flex items-center gap-3 px-5 py-3">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#fff4bd]">
+                      <svg viewBox="0 0 24 24" className="h-4 w-4 text-[#8c6900]" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18" strokeLinecap="round"/></svg>
+                    </span>
+                    <div>
+                      <p className="text-[10px] text-[#68736d]">Dates</p>
+                      <p className="text-sm font-bold text-[#17201c]">{new Date(`${state.startDate}T00:00:00`).toLocaleDateString("en-IN", { day: "numeric", month: "short" })} · {state.nights}N/{state.nights + 1}D</p>
+                    </div>
+                  </li>
+                )}
+                {state.plan.length > 0 && (
+                  <li className="flex items-center gap-3 px-5 py-3">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#ecebff]">
+                      <svg viewBox="0 -960 960 960" className="h-4 w-4 text-[#5146a5]" fill="currentColor"><path d="M480-260q75 0 127.5-52.5T660-440q0-75-52.5-127.5T480-620q-75 0-127.5 52.5T300-440q0 75 52.5 127.5T480-260Zm0-80q-42 0-71-29t-29-71q0-42 29-71t71-29q42 0 71 29t29 71q0 42-29 71t-71 29ZM160-120q-33 0-56.5-23.5T80-200v-480q0-33 23.5-56.5T160-760h126l74-80h240l74 80h126q33 0 56.5 23.5T880-680v480q0 33-23.5 56.5T800-120H160Zm0-80h640v-480H638l-73-80H395l-73 80H160v480Zm320-240Z"/></svg>
+                    </span>
+                    <div>
+                      <p className="text-[10px] text-[#68736d]">Safaris</p>
+                      <p className="text-sm font-bold text-[#17201c]">{state.plan.length} permit{state.plan.length !== 1 ? "s" : ""} selected</p>
+                    </div>
+                  </li>
+                )}
+                {selectedResort && (
+                  <li className="flex items-center gap-3 px-5 py-3">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#e8f4ff]">
+                      <svg viewBox="0 0 24 24" className="h-4 w-4 text-[#1a5fa8]" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" strokeLinecap="round" strokeLinejoin="round"/><path d="M9 22V12h6v10" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    </span>
+                    <div>
+                      <p className="text-[10px] text-[#68736d]">Stay</p>
+                      <p className="text-sm font-bold text-[#17201c]">{selectedResort.name}</p>
+                    </div>
+                  </li>
+                )}
+              </ul>
+            </div>
+            {/* Actions */}
+            <button type="button" onClick={continueToNext} className="w-full rounded-2xl bg-[#fdcb08] px-6 py-3.5 text-sm font-extrabold text-[#17201c] shadow-[0_8px_20px_rgba(253,203,8,0.28)] transition hover:bg-[#edbd00]">
+              {hasSafariPlan ? "Continue to transfers →" : "Plan your safari →"}
+            </button>
+            {hasSafariPlan && (
+              <button type="button" onClick={() => { update({ resortId: null }); continueToNext(); }} className="w-full rounded-2xl border border-[#d8e0db] bg-white px-6 py-3 text-sm font-bold text-[#425249] transition hover:border-[#17201c]">
+                Skip stay
+              </button>
+            )}
           </div>
         </div>
       </div>

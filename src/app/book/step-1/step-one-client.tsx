@@ -142,24 +142,11 @@ export function StepOneClient({ jungles }: { jungles: Jungle[] }) {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[linear-gradient(180deg,#FFE36D_0%,#fff3bd_34%,#ffffff_70%)] pb-12">
-      <div className="pointer-events-none absolute -left-16 top-20 h-56 w-56 rounded-full bg-white/55 blur-3xl" aria-hidden="true" />
-      <div className="pointer-events-none absolute -right-20 top-32 h-64 w-64 rounded-full bg-[#FFE36D]/40 blur-3xl" aria-hidden="true" />
+    <div className="relative min-h-screen overflow-hidden bg-[linear-gradient(180deg,#F9B233_0%,#FFD86B_16%,#FFF0D0_44%,#ffffff_70%)] pb-12">
       <div className="relative">
-        <div className="mx-auto flex max-w-3xl items-center justify-between px-4 pt-3 sm:px-6">
-          <button type="button" onClick={() => router.push("/")} className="flex h-10 w-9 items-center justify-start text-[#17201c] transition hover:-translate-x-0.5 hover:text-[#1f6b48]" aria-label="Back to home">
-            <BackIcon />
-          </button>
-          <a href="https://wa.me/?text=Hi%2C%20I%20need%20help%20planning%20my%20safari%20with%20Wild%20Excursions." target="_blank" rel="noreferrer" className="flex h-10 w-9 items-center justify-end text-[#18a957] transition hover:-translate-y-0.5 hover:text-[#087a42]" aria-label="Chat on WhatsApp">
-            <WhatsAppIcon />
-          </a>
-        </div>
-        <div className="mx-auto mb-6 px-5 pt-1 text-center sm:mb-8">
-          <h1 className="font-display text-3xl font-bold text-brand-dark sm:text-4xl">Plan Your Jungle Safari</h1>
-          <p className="mx-auto mt-2 max-w-lg text-sm text-[#5c4a10]">One simple plan for your safaris, stay and transfers.</p>
-        </div>
+        <SafariHero onBack={() => router.push("/")} />
 
-      <form onSubmit={handleContinue} className="mx-3 overflow-hidden rounded-[30px] border border-white/80 bg-white/90 shadow-[0_24px_55px_rgba(120,90,0,0.22)] backdrop-blur-xl sm:mx-auto sm:max-w-3xl">
+      <form onSubmit={handleContinue} className="relative z-10 -mt-[16px] mx-3 overflow-hidden rounded-[30px] border border-white/80 bg-white/90 shadow-[0_24px_55px_rgba(120,90,0,0.22)] backdrop-blur-xl sm:mx-auto sm:max-w-3xl">
         <OfferBanner />
 
         <div className="space-y-3 bg-white/55 p-4 pb-5 sm:p-6">
@@ -363,34 +350,79 @@ export function StepOneClient({ jungles }: { jungles: Jungle[] }) {
         </div>
       </form>
 
-      <section className="mx-auto mt-8 w-full max-w-3xl px-3 sm:mt-10" aria-label="Wild Excursions services">
-        <div className="relative z-20 overflow-hidden rounded-[26px] border border-[#ece7d8] bg-white/95 py-5 shadow-[0_14px_36px_rgba(24,37,31,0.09)] backdrop-blur-sm">
-          <div className="flex items-end justify-between gap-4 px-5">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#8a6a00]">Travel made easy</p>
-              <h2 className="mt-1 text-[17px] font-bold text-brand-dark">Pay and plan your way</h2>
+      <section className="mx-auto mt-8 w-full max-w-3xl px-3 sm:mt-10" aria-label="Payment options">
+        <div className="relative z-20 overflow-hidden rounded-[26px] border border-[#f0e6bd] bg-white shadow-[0_14px_36px_rgba(120,90,0,0.12)]">
+          <div className="h-1.5 bg-[linear-gradient(90deg,#FFE36D,#fdcb08,#FFE36D)]" aria-hidden="true" />
+          <div className="px-5 pb-5 pt-4">
+            <div className="flex items-center gap-3">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[linear-gradient(145deg,#fffdf4,#ffefad)] text-[#6b5200] shadow-[0_4px_10px_rgba(111,87,0,0.12)]">
+                <svg aria-hidden="true" viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="6" width="18" height="13" rx="2.5" /><path d="M3 10.5h18M7 15h4" strokeLinecap="round" /></svg>
+              </span>
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#8a6a00]">Travel made easy</p>
+                <h2 className="font-display text-xl font-bold leading-tight text-brand-dark">Pay and plan your way</h2>
+              </div>
             </div>
-            <span className="shrink-0 text-[10px] font-medium text-[#777] sm:hidden">Swipe →</span>
-          </div>
+            <p className="mt-3 text-xs leading-5 text-[#68736d]">Cards, UPI and more, accepted</p>
 
-          <div className="mt-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-5 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            <TravelShortcut type="payment" label="Flexible Payments" />
-            <TravelShortcut type="card" label="Cards" />
-            <TravelShortcut type="emi" label="EMI" />
-            <TravelShortcut type="upi" label="UPI" />
-            <TravelShortcut type="expert" label="Safari Expert" />
-            <TravelShortcut type="verified" label="Sample Availability" />
-            <TravelShortcut type="transfer" label="Pickup & Drop" />
-            <TravelShortcut type="group" label="Group Planning" />
+            <PaymentShortcut />
           </div>
         </div>
-
       </section>
+
       </div>
     </div>
   );
 }
 
+
+function SafariHero({ onBack }: { onBack: () => void }) {
+  const circle = "flex h-11 w-11 items-center justify-center rounded-full bg-white/95 shadow-[0_4px_12px_rgba(120,60,0,0.22)] transition active:scale-95";
+  return (
+    <header className="relative overflow-hidden pb-0 pt-4">
+      {/* sunburst */}
+      <div
+        aria-hidden="true"
+        className="absolute inset-0"
+        style={{ background: "radial-gradient(circle at 50% 58%, #FFF7C2 0%, #FFE27A 34%, #FDBF3A 72%, #F7A82A 100%)" }}
+      />
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 opacity-70"
+        style={{
+          background: "repeating-conic-gradient(from 0deg at 50% 58%, rgba(255,255,255,0.55) 0deg 5deg, rgba(255,255,255,0) 5deg 15deg)",
+          maskImage: "radial-gradient(circle at 50% 58%, #000 8%, transparent 78%)",
+          WebkitMaskImage: "radial-gradient(circle at 50% 58%, #000 8%, transparent 78%)",
+        }}
+      />
+
+      <div className="relative mx-auto flex max-w-3xl items-center justify-between px-4 sm:px-6">
+        <button type="button" onClick={onBack} className={`${circle} text-[#17201c]`} aria-label="Back to home">
+          <BackIcon />
+        </button>
+        <a href="https://wa.me/?text=Hi%2C%20I%20need%20help%20planning%20my%20safari%20with%20Wild%20Excursions." target="_blank" rel="noreferrer" className={`${circle} text-[#18a957]`} aria-label="Chat on WhatsApp">
+          <WhatsAppIcon />
+        </a>
+      </div>
+
+      <div className="relative mt-3 px-6 text-center">
+        <h1 className="font-display text-3xl font-bold text-brand-dark sm:text-4xl">Plan Your Jungle Safari</h1>
+        <p className="mx-auto mt-2 max-w-md text-sm text-[#5c4a10]">One simple plan for your safaris, stay and transfers.</p>
+      </div>
+
+      {/* Savannah silhouette band along the bottom of the sunburst */}
+      <Image
+        src="/hero/animals.png"
+        alt=""
+        aria-hidden="true"
+        width={1400}
+        height={411}
+        priority
+        className="relative mt-2 block h-auto w-full select-none opacity-90"
+      />
+    </header>
+  );
+}
 
 function OfferBanner() {
   const code = "LONGWEEKEND";
@@ -443,26 +475,28 @@ function OfferBanner() {
   );
 }
 
-function TravelShortcut({ type, label }: {
-  type: "payment" | "card" | "emi" | "upi" | "expert" | "verified" | "transfer" | "group";
-  label: string;
-}) {
-  const iconSources = {
-    payment: "/icons/payments.svg",
-    card: "/icons/add-card.svg",
-    emi: "/icons/payments.svg",
-    upi: "/icons/upi-pay.svg",
-    expert: "/icons/support-agent.svg",
-    verified: "/icons/verified.svg",
-    transfer: "/icons/local-taxi.svg",
-    group: "/icons/group.svg",
-  };
+function PaymentShortcut() {
+  const chip = "flex h-12 min-w-0 items-center justify-center overflow-hidden rounded-xl border border-[#efe6c4] bg-white px-1.5 shadow-[0_2px_6px_rgba(111,87,0,0.08)] transition hover:-translate-y-0.5 hover:shadow-[0_6px_12px_rgba(111,87,0,0.14)]";
   return (
-    <div className="w-[84px] shrink-0 snap-start text-center sm:w-[92px]">
-      <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-[20px] border border-[#f0df9c] bg-[linear-gradient(145deg,#fffdf4_5%,#ffefad_100%)] shadow-[0_9px_18px_rgba(111,87,0,0.14)] transition duration-200 hover:-translate-y-1 hover:shadow-[0_12px_24px_rgba(111,87,0,0.2)] sm:h-[68px] sm:w-[68px]">
-        <Image src={iconSources[type]} alt="" width={30} height={30} aria-hidden="true" className="h-[30px] w-[30px]" />
+    <div className="mt-4 grid grid-cols-5 gap-2">
+      <span className={chip} aria-label="Mastercard">
+        <svg viewBox="0 0 40 26" className="h-6 w-9" aria-hidden="true"><circle cx="14" cy="13" r="10" fill="#EB001B" /><circle cx="26" cy="13" r="10" fill="#F79E1B" fillOpacity=".95" /><path d="M20 4.6a10 10 0 0 1 0 16.8 10 10 0 0 1 0-16.8Z" fill="#FF5F00" /></svg>
       </span>
-      <span className="mt-2.5 block min-h-7 text-[11px] font-semibold leading-[1.25] text-brand-dark">{label}</span>
+      <span className={`${chip} border-[#1f3a7a] bg-[#1f3a7a]`} aria-label="American Express">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/payments/amex.webp" alt="American Express" loading="lazy" className="max-h-7 w-full object-contain" />
+      </span>
+      <span className={chip} aria-label="Visa">
+        <span className="text-[16px] font-black italic tracking-tight text-[#1a1f71]">VISA</span>
+      </span>
+      <span className={chip} aria-label="RuPay">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/payments/rupay.webp" alt="RuPay" loading="lazy" className="max-h-5 w-full object-contain" />
+      </span>
+      <span className={chip} aria-label="UPI">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/payments/upi.svg" alt="UPI" loading="lazy" className="max-h-6 w-full object-contain" />
+      </span>
     </div>
   );
 }

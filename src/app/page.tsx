@@ -1,6 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { JungleCard } from "@/components/JungleCard";
+import { ExploreDestinations } from "@/components/ExploreDestinations";
+import { NewsUpdates } from "@/components/NewsUpdates";
 import { HeroCarousel, type HeroSlide } from "@/components/HeroCarousel";
 import { JUNGLES } from "@/lib/jungles";
 import type { Jungle } from "@/lib/types";
@@ -89,7 +91,7 @@ type TileItem = {
 
 // Left column: two tall tiles. Right column: three short tiles.
 const TILES_LEFT: TileItem[] = [
-  { title: "Jungle Safari", subtitle: "Buffer & core", highlight: "20+ parks", icon: "paw", image: "/tiles/junglesafari.png", imageClass: "bottom-1 right-1 h-[110px] w-[110px]", href: "/book/step-1", size: "tall", tint: "#fdeeb8" },
+  { title: "Jungle Safari", subtitle: "Buffer & core", highlight: "20+ parks", icon: "paw", image: "/tiles/junglesafari.png", imageClass: "bottom-1 right-1 h-[110px] w-[110px]", href: "/book/step-1", size: "tall", tint: "#d9ecdf" },
   { title: "Resorts", subtitle: "Stays near your gate", highlight: "Flat 20% Off", icon: "resort", image: "/tiles/resort.png", imageClass: "-bottom-3 -right-9 h-[140px] w-[140px]", href: "/book/step-3", size: "tall", tint: "#d9ecdf" },
 ];
 
@@ -426,6 +428,10 @@ function MobileHome({ parks }: { parks: MobilePark[] }) {
             </span>
           </Link>
         </section>
+
+        <ExploreDestinations className="mt-8 px-5" />
+
+        <NewsUpdates className="mt-14 px-5 pb-8" />
       </div>
     </div>
   );

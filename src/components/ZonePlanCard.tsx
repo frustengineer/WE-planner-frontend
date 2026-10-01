@@ -31,9 +31,6 @@ export function ZonePlanCard({
         }`}
       >
         {isMorning ? <MorningSunIcon /> : <AfternoonSunIcon />}
-        <span className={`mt-0.5 text-[7px] font-extrabold uppercase tracking-wide ${isMorning ? "text-[#7a5c0a]" : "text-[#a04510]"}`}>
-          {isMorning ? "AM" : "PM"}
-        </span>
       </span>
 
       {/* Gate + type */}

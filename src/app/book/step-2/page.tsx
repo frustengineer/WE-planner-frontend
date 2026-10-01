@@ -338,38 +338,33 @@ export default function Step2() {
               </div>
             ) : (
               <div className="space-y-4 px-5 pb-5 sm:px-7">
-                {groupPermitsByDate(recommendedPlan).map(({ date, morning, afternoon }) => (
-                  <div key={date}>
-                    <p className="mb-2 flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-[0.12em] text-[#536c31]">
-                      <CalendarDotIcon />
-                      {formatDateHeader(date)}
-                    </p>
-                    <div className="grid grid-cols-2 gap-3">
-                      {morning ? (
-                        <ZonePlanCard
-                          safari={morning}
-                          isSelected={state.plan.some((item) => item.zone.id === morning.zone.id && item.date === morning.date && item.session === morning.session)}
-                          onToggle={() => toggleSafari(morning)}
-                        />
-                      ) : (
-                        <span className="flex min-h-[110px] items-center justify-center rounded-[18px] border border-dashed border-[#dce8df] bg-white/60 text-center text-[10px] leading-4 text-[#9aab9f]">
-                          No morning<br />safari
-                        </span>
-                      )}
-                      {afternoon ? (
-                        <ZonePlanCard
-                          safari={afternoon}
-                          isSelected={state.plan.some((item) => item.zone.id === afternoon.zone.id && item.date === afternoon.date && item.session === afternoon.session)}
-                          onToggle={() => toggleSafari(afternoon)}
-                        />
-                      ) : (
-                        <span className="flex min-h-[110px] items-center justify-center rounded-[18px] border border-dashed border-[#dce8df] bg-white/60 text-center text-[10px] leading-4 text-[#9aab9f]">
-                          No evening<br />safari
-                        </span>
-                      )}
+                {groupPermitsByDate(recommendedPlan).map(({ date, morning, afternoon }) => {
+                  const both = Boolean(morning && afternoon);
+                  return (
+                    <div key={date}>
+                      <p className="mb-2 flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-[0.12em] text-[#536c31]">
+                        <CalendarDotIcon />
+                        {formatDateHeader(date)}
+                      </p>
+                      <div className={both ? "grid grid-cols-2 gap-3" : "max-w-[50%]"}>
+                        {morning && (
+                          <ZonePlanCard
+                            safari={morning}
+                            isSelected={state.plan.some((item) => item.zone.id === morning.zone.id && item.date === morning.date && item.session === morning.session)}
+                            onToggle={() => toggleSafari(morning)}
+                          />
+                        )}
+                        {afternoon && (
+                          <ZonePlanCard
+                            safari={afternoon}
+                            isSelected={state.plan.some((item) => item.zone.id === afternoon.zone.id && item.date === afternoon.date && item.session === afternoon.session)}
+                            onToggle={() => toggleSafari(afternoon)}
+                          />
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </section>

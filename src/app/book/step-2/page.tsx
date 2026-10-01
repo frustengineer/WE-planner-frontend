@@ -15,7 +15,7 @@ import { dateRangeFrom, toLocalISODate, ZONES } from "@/lib/mockData";
 import { calculatePartyOccupancy } from "@/lib/occupancy";
 import { computeCart } from "@/lib/pricing";
 import { getSampleAvailability } from "@/lib/sampleAvailability";
-import type { AvailabilitySnapshot, ZoneType } from "@/lib/types";
+import type { AvailabilitySnapshot, RecommendedSafari, ZoneType } from "@/lib/types";
 
 const REFRESH_INTERVAL_MS = 20_000;
 const PLANNING_HORIZON = "2027-12-31";
@@ -337,14 +337,38 @@ export default function Step2() {
                 {loading ? "Finding the best permit combination…" : "No complete permit plan was found. Try nearby dates below."}
               </div>
             ) : (
-              <div className="permit-scroll flex snap-x snap-mandatory gap-3 overflow-x-auto pb-6 sm:grid sm:grid-cols-3 sm:px-7">
-                {recommendedPlan.map((safari) => (
-                  <ZonePlanCard
-                    key={`${safari.zone.id}-${safari.date}-${safari.session}`}
-                    safari={safari}
-                    isSelected={state.plan.some((item) => item.zone.id === safari.zone.id && item.date === safari.date && item.session === safari.session)}
-                    onToggle={() => toggleSafari(safari)}
-                  />
+              <div className="space-y-4 px-5 pb-5 sm:px-7">
+                {groupPermitsByDate(recommendedPlan).map(({ date, morning, afternoon }) => (
+                  <div key={date}>
+                    <p className="mb-2 flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-[0.12em] text-[#536c31]">
+                      <CalendarDotIcon />
+                      {formatDateHeader(date)}
+                    </p>
+                    <div className="grid grid-cols-2 gap-3">
+                      {morning ? (
+                        <ZonePlanCard
+                          safari={morning}
+                          isSelected={state.plan.some((item) => item.zone.id === morning.zone.id && item.date === morning.date && item.session === morning.session)}
+                          onToggle={() => toggleSafari(morning)}
+                        />
+                      ) : (
+                        <span className="flex min-h-[110px] items-center justify-center rounded-[18px] border border-dashed border-[#dce8df] bg-white/60 text-center text-[10px] leading-4 text-[#9aab9f]">
+                          No morning<br />safari
+                        </span>
+                      )}
+                      {afternoon ? (
+                        <ZonePlanCard
+                          safari={afternoon}
+                          isSelected={state.plan.some((item) => item.zone.id === afternoon.zone.id && item.date === afternoon.date && item.session === afternoon.session)}
+                          onToggle={() => toggleSafari(afternoon)}
+                        />
+                      ) : (
+                        <span className="flex min-h-[110px] items-center justify-center rounded-[18px] border border-dashed border-[#dce8df] bg-white/60 text-center text-[10px] leading-4 text-[#9aab9f]">
+                          No evening<br />safari
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 ))}
               </div>
             )}
@@ -521,6 +545,23 @@ function SummaryChip({ icon, label, onClick }: { icon: React.ReactNode; label: s
   );
 }
 
+function groupPermitsByDate(plan: RecommendedSafari[]) {
+  const map = new Map<string, { morning?: RecommendedSafari; afternoon?: RecommendedSafari }>();
+  for (const safari of plan) {
+    const entry = map.get(safari.date) ?? {};
+    if (safari.session === "morning") entry.morning = safari;
+    else entry.afternoon = safari;
+    map.set(safari.date, entry);
+  }
+  return Array.from(map.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, slots]) => ({ date, ...slots }));
+}
+
+function formatDateHeader(iso: string) {
+  return new Date(`${iso}T00:00:00`).toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
+}
+
 function formatDayDate(iso: string) {
   return new Date(`${iso}T00:00:00`).toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
 }
@@ -565,4 +606,7 @@ function CopyIcon() {
 }
 function CheckIconSmall() {
   return <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5 shrink-0 text-[#218552]" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="m5 12 4 4L19 6" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+}
+function CalendarDotIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2"><rect x="4" y="5" width="16" height="15" rx="2" /><path d="M8 3v4M16 3v4M4 10h16" strokeLinecap="round" /><circle cx="12" cy="16" r="1" fill="currentColor" stroke="none" /></svg>;
 }

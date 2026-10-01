@@ -88,8 +88,8 @@ export function AvailabilityGrid({
             <span className="flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-[0.1em] text-[#c09000]">
               <SmallSunIcon /> Morning
             </span>
-            <span className="flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-[0.1em] text-[#4527a0]">
-              <SmallMoonIcon /> Afternoon
+            <span className="flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-[0.1em] text-[#a04510]">
+              <SmallAfternoonIcon /> Afternoon
             </span>
           </div>
 
@@ -267,10 +267,12 @@ function SmallSunIcon() {
   );
 }
 
-function SmallMoonIcon() {
+function SmallAfternoonIcon() {
   return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-2.5 w-2.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M20 15.2A8.2 8.2 0 0 1 8.8 4a8.4 8.4 0 1 0 11.2 11.2Z" strokeLinecap="round" strokeLinejoin="round" />
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-2.5 w-2.5 shrink-0" fill="currentColor">
+      <circle cx="12" cy="12" r="4.5" />
+      <path fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"
+        d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
     </svg>
   );
 }

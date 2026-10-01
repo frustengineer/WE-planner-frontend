@@ -27,11 +27,11 @@ export function ZonePlanCard({
       {/* Session icon pill */}
       <span
         className={`flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-xl ${
-          isMorning ? "bg-[#fff3d0]" : "bg-[#ede7f6]"
+          isMorning ? "bg-[#fff3d0]" : "bg-[#fde8cc]"
         }`}
       >
-        {isMorning ? <SunIcon /> : <MoonIcon />}
-        <span className={`mt-0.5 text-[7px] font-extrabold uppercase tracking-wide ${isMorning ? "text-[#7a5c0a]" : "text-[#4527a0]"}`}>
+        {isMorning ? <MorningSunIcon /> : <AfternoonSunIcon />}
+        <span className={`mt-0.5 text-[7px] font-extrabold uppercase tracking-wide ${isMorning ? "text-[#7a5c0a]" : "text-[#a04510]"}`}>
           {isMorning ? "AM" : "PM"}
         </span>
       </span>
@@ -74,7 +74,7 @@ export function ZonePlanCard({
   );
 }
 
-function SunIcon() {
+function MorningSunIcon() {
   return (
     <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4 text-[#c08000]" fill="none" stroke="currentColor" strokeWidth="2">
       <circle cx="12" cy="12" r="3.5" />
@@ -83,10 +83,12 @@ function SunIcon() {
   );
 }
 
-function MoonIcon() {
+function AfternoonSunIcon() {
   return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4 text-[#5c35a0]" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M20 15.2A8.2 8.2 0 0 1 8.8 4a8.4 8.4 0 1 0 11.2 11.2Z" strokeLinecap="round" strokeLinejoin="round" />
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4 text-[#c05000]" fill="currentColor">
+      <circle cx="12" cy="12" r="4.5" />
+      <path fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+        d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
     </svg>
   );
 }

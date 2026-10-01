@@ -268,13 +268,21 @@ export default function Step2() {
 
             <div className="mt-2 flex items-stretch gap-2">
               <div className="date-strip permit-scroll flex min-w-0 flex-1 gap-1 overflow-x-auto rounded-2xl bg-[#f2f5f3] p-1">
-                {requestedDates.map((date, index) => (
-                  <div key={date} className={`min-w-[64px] flex-1 shrink-0 rounded-xl px-2 py-1.5 text-center transition ${index === 0 ? "bg-[#18211d] text-white shadow-sm" : "text-[#435149]"}`}>
-                    <span className={`block text-[8px] font-extrabold uppercase tracking-[0.1em] ${index === 0 ? "text-white/55" : "text-[#8a958f]"}`}>{formatWeekday(date)}</span>
-                    <span className="mt-0.5 block text-base font-extrabold leading-none">{new Date(`${date}T00:00:00`).getDate()}</span>
-                    <span className={`mt-1 block text-[8px] font-semibold ${index === 0 ? "text-white/70" : "text-[#77837c]"}`}>{index === 0 ? "Arrival" : index === requestedDates.length - 1 ? "Departure" : "Safari"}</span>
-                  </div>
-                ))}
+                {requestedDates.map((date, index) => {
+                  const isArrival = index === 0;
+                  const isDeparture = index === requestedDates.length - 1;
+                  const hasPermit = state.plan.some((s) => s.date === date);
+                  const isActive = isArrival || hasPermit;
+                  return (
+                    <div key={date} className={`min-w-[64px] flex-1 shrink-0 rounded-xl px-2 py-1.5 text-center transition ${isActive ? "bg-[#18211d] text-white shadow-sm" : "text-[#435149]"}`}>
+                      <span className={`block text-[8px] font-extrabold uppercase tracking-[0.1em] ${isActive ? "text-white/55" : "text-[#8a958f]"}`}>{formatWeekday(date)}</span>
+                      <span className="mt-0.5 block text-base font-extrabold leading-none">{new Date(`${date}T00:00:00`).getDate()}</span>
+                      <span className={`mt-1 block text-[8px] font-semibold ${isActive ? "text-white/70" : "text-[#77837c]"}`}>
+                        {isArrival ? "Arrival" : isDeparture ? "Departure" : hasPermit ? "Added ✓" : "Safari"}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
 
               <label className="relative flex w-[72px] shrink-0 cursor-pointer flex-col items-center justify-center rounded-2xl border border-[#dce2de] bg-white text-[#304139] transition hover:border-[#789b89] hover:bg-[#f8faf8] sm:w-[108px]">

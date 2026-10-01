@@ -89,7 +89,7 @@ export function AvailabilityGrid({
               <SmallSunIcon /> Morning
             </span>
             <span className="flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-[0.1em] text-[#4527a0]">
-              <SmallMoonIcon /> Evening
+              <SmallMoonIcon /> Afternoon
             </span>
           </div>
 

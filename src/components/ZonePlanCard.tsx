@@ -52,7 +52,7 @@ export function ZonePlanCard({
             {safari.zone.type}
           </span>
           <span className="text-[10px] font-semibold text-[#8a958f]">
-            {isMorning ? "Morning safari" : "Evening safari"}
+            {isMorning ? "Morning safari" : "Afternoon safari"}
           </span>
         </span>
       </span>

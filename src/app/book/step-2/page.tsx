@@ -11,7 +11,7 @@ import {
   type PreferredRecommendation,
 } from "@/lib/engine";
 import { useBooking } from "@/lib/booking-context";
-import { dateRangeFrom, toLocalISODate, ZONES } from "@/lib/mockData";
+import { dateRangeFrom, toLocalISODate, ZONES, PRICING } from "@/lib/mockData";
 import { calculatePartyOccupancy } from "@/lib/occupancy";
 import { computeCart } from "@/lib/pricing";
 import { getSampleAvailability } from "@/lib/sampleAvailability";
@@ -30,6 +30,7 @@ export default function Step2() {
   const [availability, setAvailability] = useState<AvailabilitySnapshot[]>([]);
   const [recommendation, setRecommendation] = useState<PreferredRecommendation | null>(null);
   const [activeZoneType, setActiveZoneType] = useState<ZoneType>("buffer");
+  const [activeRecommendedSession, setActiveRecommendedSession] = useState<"morning" | "afternoon">("morning");
   const [refreshTick, setRefreshTick] = useState(0);
   const [cartAnimationKey, setCartAnimationKey] = useState(0);
   const [dateChangeNotice, setDateChangeNotice] = useState<string | null>(null);
@@ -324,18 +325,19 @@ export default function Step2() {
           )}
 
           <section className="-mx-3 overflow-hidden bg-[linear-gradient(145deg,#fff5c9_0%,#f7f3df_45%,#e8f6ed_100%)] sm:-mx-5 lg:mx-0">
-            <div className="flex flex-col gap-4 px-5 pb-4 pt-5 sm:flex-row sm:items-center sm:justify-between sm:px-7">
+            {/* Header */}
+            <div className="flex items-start justify-between gap-4 px-5 pb-3 pt-5 sm:px-7">
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xl" aria-hidden="true">👍</span>
+                  <span className="text-lg" aria-hidden="true">👍</span>
                   <p className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[#536c31]">Handpicked for your trip</p>
                 </div>
                 <h2 className="font-display mt-1 text-2xl font-bold text-[#18211d]">Recommended permits</h2>
-                <p className="mt-1 text-xs text-[#657068]">Best available mix based on zone priority and your dates.</p>
+                <p className="mt-0.5 text-xs text-[#657068]">Best available mix based on zone priority and your dates.</p>
               </div>
               {recommendedPlan.length > 0 && (
-                <button type="button" onClick={addRecommendedPlan} className="rounded-xl bg-[#18211d] px-4 py-2.5 text-xs font-extrabold text-white shadow-lg transition hover:bg-black">
-                  Add all {recommendedPlan.length} permits
+                <button type="button" onClick={addRecommendedPlan} className="mt-1 shrink-0 rounded-xl border border-[#c9b56a] bg-white/70 px-3 py-2 text-[11px] font-extrabold text-[#18211d] transition hover:bg-white">
+                  Add all {recommendedPlan.length}
                 </button>
               )}
             </div>
@@ -345,32 +347,103 @@ export default function Step2() {
                 {loading ? "Finding the best permit combination…" : "No complete permit plan was found. Try nearby dates below."}
               </div>
             ) : (
-              <div className="space-y-5 px-5 pb-5 sm:px-7">
-                {groupPermitsByDate(recommendedPlan).map(({ date, morning, afternoon }) => (
-                  <div key={date}>
-                    <p className="mb-2.5 flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-[0.12em] text-[#536c31]">
-                      <CalendarDotIcon />
-                      {formatDateHeader(date)}
-                    </p>
-                    <div className="space-y-2">
-                      {morning && (
-                        <ZonePlanCard
-                          safari={morning}
-                          isSelected={state.plan.some((item) => item.zone.id === morning.zone.id && item.date === morning.date && item.session === morning.session)}
-                          onToggle={() => toggleSafari(morning)}
-                        />
-                      )}
-                      {afternoon && (
-                        <ZonePlanCard
-                          safari={afternoon}
-                          isSelected={state.plan.some((item) => item.zone.id === afternoon.zone.id && item.date === afternoon.date && item.session === afternoon.session)}
-                          onToggle={() => toggleSafari(afternoon)}
-                        />
-                      )}
-                    </div>
+              <>
+                {/* Morning / Afternoon tabs */}
+                <div className="px-5 pb-3 sm:px-7">
+                  <div className="grid grid-cols-2 rounded-xl bg-white/50 p-1 shadow-[inset_0_1px_3px_rgba(0,0,0,0.07)]">
+                    {(["morning", "afternoon"] as const).map((session) => {
+                      const count = recommendedPlan.filter((s) => s.session === session).length;
+                      const isActive = activeRecommendedSession === session;
+                      return (
+                        <button
+                          key={session}
+                          type="button"
+                          onClick={() => setActiveRecommendedSession(session)}
+                          className={`flex items-center justify-center gap-2 rounded-[10px] px-4 py-2.5 text-xs font-extrabold transition ${
+                            isActive ? "bg-[#18211d] text-white shadow-md" : "text-[#66736d] hover:text-[#18211d]"
+                          }`}
+                        >
+                          {session === "morning" ? <TabSunIcon /> : <TabAfternoonIcon />}
+                          {session === "morning" ? "Morning" : "Afternoon"}
+                          {count > 0 && (
+                            <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${isActive ? "bg-white/20 text-white" : "bg-[#d8e8dc] text-[#3a5e45]"}`}>
+                              {count}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
-                ))}
-              </div>
+                </div>
+
+                {/* Cards for active session */}
+                <div className="space-y-2.5 px-5 pb-5 sm:px-7">
+                  {recommendedPlan
+                    .filter((s) => s.session === activeRecommendedSession)
+                    .sort((a, b) => a.date.localeCompare(b.date))
+                    .map((safari) => {
+                      const isSelected = state.plan.some(
+                        (item) => item.zone.id === safari.zone.id && item.date === safari.date && item.session === safari.session
+                      );
+                      return (
+                        <button
+                          key={`${safari.zone.id}-${safari.date}`}
+                          type="button"
+                          onClick={() => toggleSafari(safari)}
+                          aria-pressed={isSelected}
+                          className={`group flex w-full items-center gap-3 overflow-hidden rounded-2xl border px-4 py-3.5 text-left transition active:scale-[0.99] ${
+                            isSelected
+                              ? "border-[#2e7251] bg-white shadow-[0_6px_20px_rgba(46,114,81,0.15)]"
+                              : "border-[#e3ebe6] bg-white shadow-[0_3px_12px_rgba(30,54,45,0.07)] hover:border-[#2e7251]"
+                          }`}
+                        >
+                          {/* Date pill */}
+                          <span className={`flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-xl ${isSelected ? "bg-[#2e7251]" : "bg-[#f0f5f2]"}`}>
+                            <span className={`text-base font-extrabold leading-none ${isSelected ? "text-white" : "text-[#18211d]"}`}>
+                              {new Date(`${safari.date}T00:00:00`).getDate()}
+                            </span>
+                            <span className={`text-[8px] font-bold uppercase tracking-wide ${isSelected ? "text-white/70" : "text-[#8a958f]"}`}>
+                              {new Date(`${safari.date}T00:00:00`).toLocaleDateString("en-IN", { month: "short" })}
+                            </span>
+                          </span>
+
+                          {/* Gate + info */}
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-sm font-extrabold text-[#18211d]">
+                              {safari.zone.gate} Gate
+                            </span>
+                            <span className="mt-1 flex items-center gap-1.5">
+                              <span className={`inline-flex rounded-full px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wide ${
+                                safari.zone.type === "core" ? "bg-[#fce8d0] text-[#7c3503]" : "bg-[#dff2e8] text-[#1a5c38]"
+                              }`}>
+                                {safari.zone.type}
+                              </span>
+                              <span className="text-[10px] text-[#8a958f]">
+                                {new Date(`${safari.date}T00:00:00`).toLocaleDateString("en-IN", { weekday: "long" })}
+                              </span>
+                            </span>
+                          </span>
+
+                          {/* Price + action */}
+                          <span className="flex shrink-0 flex-col items-end gap-1.5">
+                            <span className="text-sm font-extrabold text-[#18211d]">₹{(PRICING.permitPerSafari * safari.gypsiesRequired).toLocaleString("en-IN")}</span>
+                            <span className={`rounded-lg px-3 py-1.5 text-[11px] font-extrabold ${
+                              isSelected ? "bg-[#2e7251] text-white" : "bg-[#1f6b48] text-white group-hover:bg-[#2e7251]"
+                            }`}>
+                              {isSelected ? "✓ Added" : "Add"}
+                            </span>
+                          </span>
+                        </button>
+                      );
+                    })}
+
+                  {recommendedPlan.filter((s) => s.session === activeRecommendedSession).length === 0 && (
+                    <p className="rounded-2xl border border-dashed border-[#c9b76f] bg-white/50 py-6 text-center text-xs text-[#7a7048]">
+                      No {activeRecommendedSession} safaris in the recommended plan.
+                    </p>
+                  )}
+                </div>
+              </>
             )}
           </section>
 
@@ -609,4 +682,10 @@ function CheckIconSmall() {
 }
 function CalendarDotIcon() {
   return <svg aria-hidden="true" viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2"><rect x="4" y="5" width="16" height="15" rx="2" /><path d="M8 3v4M16 3v4M4 10h16" strokeLinecap="round" /><circle cx="12" cy="16" r="1" fill="currentColor" stroke="none" /></svg>;
+}
+function TabSunIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3.5" /><path d="M12 2.5v2M12 19.5v2M4.5 4.5l1.4 1.4M18.1 18.1l1.4 1.4M2.5 12h2M19.5 12h2M4.5 19.5l1.4-1.4M18.1 5.9l1.4-1.4" strokeLinecap="round" /></svg>;
+}
+function TabAfternoonIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0" fill="currentColor"><circle cx="12" cy="12" r="4" /><path fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" /></svg>;
 }

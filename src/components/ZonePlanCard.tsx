@@ -64,7 +64,7 @@ export function ZonePlanCard({
               : "bg-[#1f6b48] text-white group-hover:bg-[#2e7251]"
           }`}
         >
-          {isSelected ? "✓ Added" : "Add →"}
+          {isSelected ? "✓ Added" : "Add"}
         </span>
       </span>
     </button>

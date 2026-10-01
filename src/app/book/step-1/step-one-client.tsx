@@ -60,7 +60,7 @@ export function StepOneClient({ jungles }: { jungles: Jungle[] }) {
             ? "trip-travellers-control"
             : null;
     /* eslint-disable react-hooks/set-state-in-effect -- URL-driven edit links intentionally open the requested Step 1 control after mount */
-    if (requestedEditor === "date") requestAnimationFrame(() => dateInputRef.current?.showPicker());
+    if (requestedEditor === "date") requestAnimationFrame(() => { try { dateInputRef.current?.showPicker(); } catch { /* iOS Safari does not support showPicker */ } });
     if (requestedEditor === "travellers") setTravellerPickerOpen(true);
     /* eslint-enable react-hooks/set-state-in-effect */
     if (editorTarget) {
@@ -229,16 +229,12 @@ export function StepOneClient({ jungles }: { jungles: Jungle[] }) {
           )}
 
           <div className="grid grid-cols-2 gap-3">
-            <div
+            <label
               id="trip-date-control"
-              role="button"
-              tabIndex={0}
-              onClick={() => { closePickers(); dateInputRef.current?.showPicker(); }}
-              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); dateInputRef.current?.showPicker(); } }}
-              className="group relative flex min-h-[88px] w-full cursor-pointer items-center gap-2 rounded-2xl border border-[#eadfae] bg-white px-2.5 py-3 text-left shadow-[0_2px_8px_rgba(17,17,17,0.03)] transition hover:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 sm:gap-3 sm:px-4"
+              className="group relative flex min-h-[88px] w-full cursor-pointer items-center gap-2 rounded-2xl border border-[#eadfae] bg-white px-2.5 py-3 text-left shadow-[0_2px_8px_rgba(17,17,17,0.03)] transition hover:border-accent sm:gap-3 sm:px-4"
             >
               <FieldIcon type="date" />
-              <span className="min-w-0 flex-1">
+              <span className="pointer-events-none min-w-0 flex-1">
                 <span className="block whitespace-nowrap text-[9px] font-semibold uppercase tracking-[0.02em] text-muted sm:text-[10px]">Date of travel</span>
                 <span className="mt-1.5 block whitespace-nowrap text-[13px] font-semibold leading-none text-brand-dark">
                   {state.startDate ? formatDateField(state.startDate) : "dd-mm-yyyy"}
@@ -251,11 +247,10 @@ export function StepOneClient({ jungles }: { jungles: Jungle[] }) {
                 max={PLANNING_HORIZON}
                 value={state.startDate ?? ""}
                 onChange={(e) => { if (e.target.value) update({ startDate: e.target.value, recommendedStartDate: null, plan: [] }); }}
-                className="pointer-events-none absolute inset-0 h-full w-full opacity-0"
-                tabIndex={-1}
-                aria-hidden="true"
+                className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                aria-label="Date of travel"
               />
-            </div>
+            </label>
 
             <SelectionButton compact icon="length" label="Travel length" value={`${state.nights}N / ${state.nights + 1}D`} open={lengthPickerOpen} onClick={() => {
               const next = !lengthPickerOpen;

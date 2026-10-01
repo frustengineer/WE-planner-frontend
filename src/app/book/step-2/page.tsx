@@ -337,34 +337,31 @@ export default function Step2() {
                 {loading ? "Finding the best permit combination…" : "No complete permit plan was found. Try nearby dates below."}
               </div>
             ) : (
-              <div className="space-y-4 px-5 pb-5 sm:px-7">
-                {groupPermitsByDate(recommendedPlan).map(({ date, morning, afternoon }) => {
-                  const both = Boolean(morning && afternoon);
-                  return (
-                    <div key={date}>
-                      <p className="mb-2 flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-[0.12em] text-[#536c31]">
-                        <CalendarDotIcon />
-                        {formatDateHeader(date)}
-                      </p>
-                      <div className={both ? "grid grid-cols-2 gap-3" : "max-w-[50%]"}>
-                        {morning && (
-                          <ZonePlanCard
-                            safari={morning}
-                            isSelected={state.plan.some((item) => item.zone.id === morning.zone.id && item.date === morning.date && item.session === morning.session)}
-                            onToggle={() => toggleSafari(morning)}
-                          />
-                        )}
-                        {afternoon && (
-                          <ZonePlanCard
-                            safari={afternoon}
-                            isSelected={state.plan.some((item) => item.zone.id === afternoon.zone.id && item.date === afternoon.date && item.session === afternoon.session)}
-                            onToggle={() => toggleSafari(afternoon)}
-                          />
-                        )}
-                      </div>
+              <div className="space-y-5 px-5 pb-5 sm:px-7">
+                {groupPermitsByDate(recommendedPlan).map(({ date, morning, afternoon }) => (
+                  <div key={date}>
+                    <p className="mb-2.5 flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-[0.12em] text-[#536c31]">
+                      <CalendarDotIcon />
+                      {formatDateHeader(date)}
+                    </p>
+                    <div className="space-y-2">
+                      {morning && (
+                        <ZonePlanCard
+                          safari={morning}
+                          isSelected={state.plan.some((item) => item.zone.id === morning.zone.id && item.date === morning.date && item.session === morning.session)}
+                          onToggle={() => toggleSafari(morning)}
+                        />
+                      )}
+                      {afternoon && (
+                        <ZonePlanCard
+                          safari={afternoon}
+                          isSelected={state.plan.some((item) => item.zone.id === afternoon.zone.id && item.date === afternoon.date && item.session === afternoon.session)}
+                          onToggle={() => toggleSafari(afternoon)}
+                        />
+                      )}
                     </div>
-                  );
-                })}
+                  </div>
+                ))}
               </div>
             )}
           </section>
